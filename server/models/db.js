@@ -225,7 +225,8 @@ class DBModel {
         email: data.email,
         name: data.full_name || data.name,
         role: data.is_admin ? 'admin' : 'employee',
-        departments: [], // Would need department mapping if required
+        visibilityScope: data.visibility_scope || 'self',
+        departments: [],
         id: data.id
       };
     }
@@ -466,6 +467,49 @@ class DBModel {
     }
 
     return activities;
+  }
+
+  async getActivitiesByUserDepartments(email) {
+    if (HAS_SUPABASE) {
+      // Get the employee's department IDs via the employee_departments junction table
+      const employee = await storage.adapter.getEmployeeByEmail(email);
+      if (!employee) {
+        console.log('Employee not found for email:', email);
+        return [];
+      }
+
+      const { data: empDepts, error: deptError } = await storage.supabase
+        .from('employee_departments')
+        .select('department_id')
+        .eq('employee_id', employee.id);
+
+      if (deptError) {
+        console.error('Error fetching employee departments:', deptError);
+        return [];
+      }
+
+      if (!empDepts || empDepts.length === 0) {
+        console.log('No departments found for employee:', email);
+        return [];
+      }
+
+      const departmentIds = empDepts.map(ed => ed.department_id);
+
+      const { data, error } = await storage.supabase
+        .from('activities')
+        .select('*')
+        .in('department_id', departmentIds)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching activities by departments:', error);
+        return [];
+      }
+      return await storage.adapter.toAppActivities(data || []);
+    }
+
+    // Fallback: return user's own activities for non-Supabase mode
+    return await this.getActivitiesByUser(email);
   }
 
   async getActivitiesByWeek(weekEnding) {

@@ -94,7 +94,7 @@
       <div class="flex justify-between items-center">
         <div>
           <h1 class="text-2xl font-bold">VIFM Admin Management</h1>
-          <p class="text-indigo-100 text-sm">Department & Activity Type Configuration</p>
+          <p class="text-indigo-100 text-sm">Department, Activity Type & Employee Configuration</p>
         </div>
         <div class="flex gap-3">
           <a href="/" class="px-4 py-2 bg-white text-indigo-600 rounded-lg hover:bg-indigo-50 transition">
@@ -123,6 +123,11 @@
                   class="tab-button px-6 py-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                   data-tab="activity-types">
             📋 Activity Types
+          </button>
+          <button id="tab-employees"
+                  class="tab-button px-6 py-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  data-tab="employees">
+            👥 Employees
           </button>
         </nav>
       </div>
@@ -221,6 +226,60 @@
                 <td colspan="5" class="px-6 py-4 text-center text-gray-500">
                   <div class="spinner mx-auto"></div>
                   <div class="mt-2">Loading activity types...</div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Employees Tab -->
+    <div id="employees-tab" class="tab-content">
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-2xl font-bold text-gray-800">Employee Management</h2>
+          <button id="add-employee-btn"
+                  class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
+            + Add Employee
+          </button>
+        </div>
+
+        <!-- Employee Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg">
+            <div class="text-blue-600 text-sm font-medium">Total Employees</div>
+            <div id="emp-total-count" class="text-3xl font-bold text-blue-900">-</div>
+          </div>
+          <div class="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg">
+            <div class="text-green-600 text-sm font-medium">Active Employees</div>
+            <div id="emp-active-count" class="text-3xl font-bold text-green-900">-</div>
+          </div>
+          <div class="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg">
+            <div class="text-purple-600 text-sm font-medium">Admins</div>
+            <div id="emp-admin-count" class="text-3xl font-bold text-purple-900">-</div>
+          </div>
+        </div>
+
+        <!-- Employees Table -->
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department(s)</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Visibility</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="employees-table" class="bg-white divide-y divide-gray-200">
+              <tr>
+                <td colspan="7" class="px-6 py-4 text-center text-gray-500">
+                  <div class="spinner mx-auto"></div>
+                  <div class="mt-2">Loading employees...</div>
                 </td>
               </tr>
             </tbody>
@@ -332,6 +391,90 @@
     </div>
   </div>
 
+  <!-- Employee Modal -->
+  <div id="employee-modal" class="modal">
+    <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 p-6">
+      <div class="flex justify-between items-center mb-4">
+        <h3 id="emp-modal-title" class="text-xl font-bold text-gray-800">Add Employee</h3>
+        <button id="emp-modal-close" class="text-gray-400 hover:text-gray-600">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <form id="employee-form" class="space-y-4">
+        <input type="hidden" id="emp-id">
+
+        <div>
+          <label for="emp-name" class="block text-sm font-medium text-gray-700 mb-1">
+            Full Name <span class="text-red-500">*</span>
+          </label>
+          <input type="text" id="emp-name" required
+                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                 placeholder="Enter full name">
+        </div>
+
+        <div>
+          <label for="emp-email" class="block text-sm font-medium text-gray-700 mb-1">
+            Email <span class="text-red-500">*</span>
+          </label>
+          <input type="email" id="emp-email" required
+                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                 placeholder="Enter email address">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Role</label>
+          <div class="flex items-center gap-4">
+            <label class="flex items-center">
+              <input type="radio" name="emp-role" value="employee" checked class="mr-2">
+              <span class="text-sm text-gray-700">Employee</span>
+            </label>
+            <label class="flex items-center">
+              <input type="radio" name="emp-role" value="admin" class="mr-2">
+              <span class="text-sm text-gray-700">Admin</span>
+            </label>
+          </div>
+        </div>
+
+        <div>
+          <label for="emp-visibility-scope" class="block text-sm font-medium text-gray-700 mb-1">
+            Visibility Scope
+            <span class="text-gray-400 text-xs">(what activities can this user see?)</span>
+          </label>
+          <select id="emp-visibility-scope"
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+            <option value="self">Self — Own activities only</option>
+            <option value="department">Department — All activities in their department(s)</option>
+            <option value="all">All — All activities company-wide</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Departments <span class="text-gray-400 text-xs">(select one or more, click to mark primary)</span>
+          </label>
+          <div id="emp-departments-list" class="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3">
+            <!-- Department checkboxes populated dynamically -->
+          </div>
+          <p class="text-xs text-gray-500 mt-1">Checked = assigned. Highlighted = primary department.</p>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-4">
+          <button type="button" id="emp-cancel-btn"
+                  class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">
+            Cancel
+          </button>
+          <button type="submit"
+                  class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
+            <span id="emp-submit-text">Save Employee</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script>
     // Check authentication
     const currentUser = JSON.parse(localStorage.getItem('vif-user') || 'null');
@@ -342,23 +485,29 @@
     // Global state
     let departments = [];
     let activityTypes = [];
+    let employees = [];
     let editingDepartmentId = null;
     let editingActivityTypeId = null;
+    let editingEmployeeId = null;
 
     // Initialize
     document.addEventListener('DOMContentLoaded', () => {
       loadDepartments();
       loadActivityTypes();
+      loadEmployees();
 
       // Form submit handlers
       document.getElementById('department-form').addEventListener('submit', handleDepartmentSubmit);
       document.getElementById('activity-type-form').addEventListener('submit', handleActivityTypeSubmit);
+      document.getElementById('employee-form').addEventListener('submit', handleEmployeeSubmit);
 
       // Modal close button handlers
       document.getElementById('dept-modal-close').addEventListener('click', closeDepartmentModal);
       document.getElementById('dept-cancel-btn').addEventListener('click', closeDepartmentModal);
       document.getElementById('activity-modal-close').addEventListener('click', closeActivityTypeModal);
       document.getElementById('activity-cancel-btn').addEventListener('click', closeActivityTypeModal);
+      document.getElementById('emp-modal-close').addEventListener('click', closeEmployeeModal);
+      document.getElementById('emp-cancel-btn').addEventListener('click', closeEmployeeModal);
 
       // Close modal when clicking outside
       document.getElementById('department-modal').addEventListener('click', (e) => {
@@ -371,14 +520,21 @@
           closeActivityTypeModal();
         }
       });
+      document.getElementById('employee-modal').addEventListener('click', (e) => {
+        if (e.target.id === 'employee-modal') {
+          closeEmployeeModal();
+        }
+      });
 
       // Tab button handlers
       document.getElementById('tab-departments').addEventListener('click', () => switchTab('departments'));
       document.getElementById('tab-activity-types').addEventListener('click', () => switchTab('activity-types'));
+      document.getElementById('tab-employees').addEventListener('click', () => switchTab('employees'));
 
       // Add buttons
       document.getElementById('add-department-btn').addEventListener('click', () => openDepartmentModal());
       document.getElementById('add-activity-type-btn').addEventListener('click', () => openActivityTypeModal());
+      document.getElementById('add-employee-btn').addEventListener('click', () => openEmployeeModal());
 
       // Logout handler
       document.getElementById('logout-button').addEventListener('click', () => {
@@ -820,6 +976,314 @@
 
       } catch (error) {
         console.error('View analytics error:', error);
+        showNotification(error.message, 'error');
+      }
+    }
+
+    // ==================== Employee Management ====================
+
+    async function loadEmployees() {
+      try {
+        const response = await fetch('/api/users/employees');
+        const data = await response.json();
+
+        if (!data.success) {
+          throw new Error('Failed to load employees');
+        }
+
+        employees = data.employees;
+        renderEmployees();
+        updateEmployeeStats();
+
+      } catch (error) {
+        console.error('Load employees error:', error);
+        showNotification('Failed to load employees', 'error');
+      }
+    }
+
+    function renderEmployees() {
+      const tbody = document.getElementById('employees-table');
+
+      if (employees.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" class="px-6 py-4 text-center text-gray-500">
+              No employees found. Click "Add Employee" to create one.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = employees.map(emp => {
+        const deptDisplay = (emp.departments || [])
+          .map(d => {
+            const badge = d.isPrimary
+              ? `<span class="inline-block px-2 py-0.5 bg-indigo-100 text-indigo-800 text-xs rounded-full font-semibold">${escapeHtml(d.name)} (Primary)</span>`
+              : `<span class="inline-block px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded-full">${escapeHtml(d.name)}</span>`;
+            return badge;
+          })
+          .join(' ');
+
+        return `
+          <tr class="hover:bg-gray-50" data-emp-id="${emp.id}">
+            <td class="px-6 py-4 whitespace-nowrap">
+              <div class="text-sm font-medium text-gray-900">${escapeHtml(emp.name)}</div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <div class="text-sm text-gray-500">${escapeHtml(emp.email)}</div>
+            </td>
+            <td class="px-6 py-4">
+              <div class="flex flex-wrap gap-1">${deptDisplay || '<span class="text-gray-400 text-xs">None</span>'}</div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                emp.role === 'admin'
+                  ? 'bg-purple-100 text-purple-800'
+                  : 'bg-blue-100 text-blue-800'
+              }">
+                ${emp.role === 'admin' ? 'Admin' : 'Employee'}
+              </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                emp.visibilityScope === 'all'
+                  ? 'bg-red-100 text-red-800'
+                  : emp.visibilityScope === 'department'
+                    ? 'bg-yellow-100 text-yellow-800'
+                    : 'bg-gray-100 text-gray-800'
+              }">
+                ${emp.visibilityScope === 'all' ? 'All' : emp.visibilityScope === 'department' ? 'Department' : 'Self'}
+              </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                emp.isActive
+                  ? 'bg-green-100 text-green-800'
+                  : 'bg-red-100 text-red-800'
+              }">
+                ${emp.isActive ? 'Active' : 'Inactive'}
+              </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+              <button data-action="edit-emp" data-id="${emp.id}"
+                      class="text-indigo-600 hover:text-indigo-900 mr-3">
+                Edit
+              </button>
+              <button data-action="delete-emp" data-id="${emp.id}"
+                      class="text-red-600 hover:text-red-900">
+                Deactivate
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      // Add event delegation for employee buttons
+      tbody.querySelectorAll('button[data-action]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const action = e.target.getAttribute('data-action');
+          const id = e.target.getAttribute('data-id');
+
+          if (action === 'edit-emp') {
+            editEmployee(id);
+          } else if (action === 'delete-emp') {
+            deleteEmployee(id);
+          }
+        });
+      });
+    }
+
+    function updateEmployeeStats() {
+      const totalCount = employees.length;
+      const activeCount = employees.filter(e => e.isActive).length;
+      const adminCount = employees.filter(e => e.role === 'admin').length;
+
+      document.getElementById('emp-total-count').textContent = totalCount;
+      document.getElementById('emp-active-count').textContent = activeCount;
+      document.getElementById('emp-admin-count').textContent = adminCount;
+    }
+
+    function populateEmployeeDepartments(selectedDepts = []) {
+      const container = document.getElementById('emp-departments-list');
+
+      if (departments.length === 0) {
+        container.innerHTML = '<p class="text-sm text-gray-500">No departments available. Create departments first.</p>';
+        return;
+      }
+
+      container.innerHTML = departments.map(dept => {
+        const selected = selectedDepts.find(d => d.id === dept.id);
+        const isChecked = !!selected;
+        const isPrimary = selected?.isPrimary || false;
+
+        return `
+          <div class="flex items-center justify-between p-2 rounded hover:bg-gray-50 ${isPrimary ? 'bg-indigo-50 border border-indigo-200' : ''}">
+            <label class="flex items-center flex-1 cursor-pointer">
+              <input type="checkbox" class="emp-dept-checkbox mr-2" value="${dept.id}"
+                     data-dept-name="${escapeHtml(dept.name)}" ${isChecked ? 'checked' : ''}>
+              <span class="text-sm text-gray-700">${escapeHtml(dept.name)}</span>
+            </label>
+            <button type="button" class="emp-dept-primary-btn text-xs px-2 py-1 rounded transition ${
+              isPrimary
+                ? 'bg-indigo-600 text-white'
+                : 'bg-gray-200 text-gray-600 hover:bg-indigo-100'
+            }" data-dept-id="${dept.id}">
+              ${isPrimary ? 'Primary' : 'Set Primary'}
+            </button>
+          </div>
+        `;
+      }).join('');
+
+      // Primary button click handler
+      container.querySelectorAll('.emp-dept-primary-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const deptId = btn.getAttribute('data-dept-id');
+          // Ensure checkbox is checked
+          const checkbox = container.querySelector(`.emp-dept-checkbox[value="${deptId}"]`);
+          if (checkbox) checkbox.checked = true;
+
+          // Reset all primary buttons
+          container.querySelectorAll('.emp-dept-primary-btn').forEach(b => {
+            b.classList.remove('bg-indigo-600', 'text-white');
+            b.classList.add('bg-gray-200', 'text-gray-600');
+            b.textContent = 'Set Primary';
+            b.closest('div').classList.remove('bg-indigo-50', 'border', 'border-indigo-200');
+          });
+
+          // Set this one as primary
+          btn.classList.remove('bg-gray-200', 'text-gray-600');
+          btn.classList.add('bg-indigo-600', 'text-white');
+          btn.textContent = 'Primary';
+          btn.closest('div').classList.add('bg-indigo-50', 'border', 'border-indigo-200');
+        });
+      });
+    }
+
+    function getSelectedDepartments() {
+      const container = document.getElementById('emp-departments-list');
+      const checkboxes = container.querySelectorAll('.emp-dept-checkbox:checked');
+      const depts = [];
+
+      checkboxes.forEach(cb => {
+        const deptId = cb.value;
+        const primaryBtn = container.querySelector(`.emp-dept-primary-btn[data-dept-id="${deptId}"]`);
+        const isPrimary = primaryBtn && primaryBtn.classList.contains('bg-indigo-600');
+
+        depts.push({
+          id: deptId,
+          isPrimary: isPrimary
+        });
+      });
+
+      return depts;
+    }
+
+    function openEmployeeModal(employeeId = null) {
+      editingEmployeeId = employeeId;
+
+      if (employeeId) {
+        const emp = employees.find(e => e.id === employeeId);
+        if (emp) {
+          document.getElementById('emp-modal-title').textContent = 'Edit Employee';
+          document.getElementById('emp-id').value = emp.id;
+          document.getElementById('emp-name').value = emp.name;
+          document.getElementById('emp-email').value = emp.email;
+
+          // Set role radio
+          const roleRadio = document.querySelector(`input[name="emp-role"][value="${emp.role}"]`);
+          if (roleRadio) roleRadio.checked = true;
+
+          // Set visibility scope
+          document.getElementById('emp-visibility-scope').value = emp.visibilityScope || 'self';
+
+          populateEmployeeDepartments(emp.departments || []);
+          document.getElementById('emp-submit-text').textContent = 'Update Employee';
+        }
+      } else {
+        document.getElementById('emp-modal-title').textContent = 'Add Employee';
+        document.getElementById('employee-form').reset();
+        populateEmployeeDepartments([]);
+        document.getElementById('emp-submit-text').textContent = 'Save Employee';
+      }
+
+      document.getElementById('employee-modal').classList.add('active');
+    }
+
+    function closeEmployeeModal() {
+      document.getElementById('employee-modal').classList.remove('active');
+      document.getElementById('employee-form').reset();
+      editingEmployeeId = null;
+    }
+
+    async function handleEmployeeSubmit(e) {
+      e.preventDefault();
+
+      const name = document.getElementById('emp-name').value.trim();
+      const email = document.getElementById('emp-email').value.trim();
+      const role = document.querySelector('input[name="emp-role"]:checked').value;
+      const visibilityScope = document.getElementById('emp-visibility-scope').value;
+      const deptAssignments = getSelectedDepartments();
+
+      if (!name || !email) {
+        showNotification('Name and email are required', 'error');
+        return;
+      }
+
+      try {
+        const url = editingEmployeeId
+          ? `/api/users/employees/${editingEmployeeId}`
+          : '/api/users/employees';
+
+        const method = editingEmployeeId ? 'PUT' : 'POST';
+
+        const response = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, role, visibilityScope, departments: deptAssignments })
+        });
+
+        const data = await response.json();
+
+        if (!data.success) {
+          throw new Error(data.error || data.details || 'Failed to save employee');
+        }
+
+        showNotification(data.message, 'success');
+        closeEmployeeModal();
+        await loadEmployees();
+
+      } catch (error) {
+        console.error('Save employee error:', error);
+        showNotification(error.message, 'error');
+      }
+    }
+
+    function editEmployee(id) {
+      openEmployeeModal(id);
+    }
+
+    async function deleteEmployee(id) {
+      if (!confirm('Are you sure you want to deactivate this employee? They will no longer be able to log in.')) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/users/employees/${id}`, {
+          method: 'DELETE'
+        });
+
+        const data = await response.json();
+
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to deactivate employee');
+        }
+
+        showNotification(data.message, 'success');
+        loadEmployees();
+
+      } catch (error) {
+        console.error('Deactivate employee error:', error);
         showNotification(error.message, 'error');
       }
     }

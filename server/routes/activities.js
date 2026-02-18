@@ -6,15 +6,18 @@ const db = require('../models/db');
 // Get all activities (admin) or user's activities (employee)
 router.get('/', async (req, res) => {
   try {
-    const { email, role, week, status, department } = req.query;
+    const { email, role, visibilityScope, week, status, department } = req.query;
 
     let activities;
 
-    if (role === 'admin') {
-      // Admin sees all activities
+    if (visibilityScope === 'all' || (role === 'admin' && !visibilityScope)) {
+      // Admin or "all" scope: sees all activities company-wide
       activities = await db.getAllActivities();
+    } else if (visibilityScope === 'department') {
+      // Department scope: sees activities for their assigned departments
+      activities = await db.getActivitiesByUserDepartments(email);
     } else {
-      // Employee sees only their activities
+      // Default "self" scope: employee sees only their own activities
       activities = await db.getActivitiesByUser(email);
     }
 
