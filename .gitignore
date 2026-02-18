@@ -1,0 +1,69 @@
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+# Environment variables
+.env
+.env.local
+.env.development
+.env.production
+
+# Replit specific
+.replit.nix
+.config/
+.cache/
+.upm/
+
+# Build outputs
+build/
+dist/
+.next/
+out/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+coverage/
+.nyc_output/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Misc
+*.pem
+.vercel
+.netlify
+
+# Claude Code
+.claude/
+
+# Supabase local
+supabase/.temp/
+
+# Temp files
+_ul
+_ul-*
+claude-code
+calude.md
+
+# Separate git repo (manage independently)
+Weekly-Status-Report/
+
+# Local database files (for local development)
+.local-data/
+*.db
+*.sqlite

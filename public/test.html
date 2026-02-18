@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VIF Tracker - Connection Test</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-4">
+  <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-6">
+    <h1 class="text-2xl font-bold text-indigo-600 mb-4">VIF Tracker - Connection Test</h1>
+
+    <div class="space-y-4">
+      <div class="p-4 bg-blue-50 rounded">
+        <h2 class="font-bold mb-2">Your Device Info:</h2>
+        <div id="device-info" class="text-sm"></div>
+      </div>
+
+      <div class="p-4 bg-green-50 rounded">
+        <h2 class="font-bold mb-2">Connection Test:</h2>
+        <button onclick="testConnection()" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">
+          Test API Connection
+        </button>
+        <div id="connection-result" class="mt-4 text-sm"></div>
+      </div>
+
+      <div class="p-4 bg-purple-50 rounded">
+        <h2 class="font-bold mb-2">Login Test:</h2>
+        <button onclick="testLogin()" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">
+          Test Login
+        </button>
+        <div id="login-result" class="mt-4 text-sm"></div>
+      </div>
+
+      <div class="p-4 bg-yellow-50 rounded">
+        <h2 class="font-bold mb-2">Console Logs:</h2>
+        <div id="console-logs" class="text-xs font-mono bg-black text-green-400 p-2 rounded h-64 overflow-y-auto"></div>
+      </div>
+    </div>
+
+    <div class="mt-6">
+      <a href="/" class="text-indigo-600 hover:underline">← Back to App</a>
+    </div>
+  </div>
+
+  <script>
+    // Capture console logs
+    const consoleDiv = document.getElementById('console-logs');
+    const originalLog = console.log;
+    const originalError = console.error;
+
+    function logToScreen(message, type = 'log') {
+      const timestamp = new Date().toLocaleTimeString();
+      const color = type === 'error' ? 'text-red-400' : 'text-green-400';
+      consoleDiv.innerHTML += `<div class="${color}">[${timestamp}] ${message}</div>`;
+      consoleDiv.scrollTop = consoleDiv.scrollHeight;
+    }
+
+    console.log = function(...args) {
+      originalLog.apply(console, args);
+      logToScreen(args.join(' '));
+    };
+
+    console.error = function(...args) {
+      originalError.apply(console, args);
+      logToScreen(args.join(' '), 'error');
+    };
+
+    // Display device info
+    const deviceInfo = document.getElementById('device-info');
+    deviceInfo.innerHTML = `
+      <strong>User Agent:</strong> ${navigator.userAgent}<br>
+      <strong>Platform:</strong> ${navigator.platform}<br>
+      <strong>Language:</strong> ${navigator.language}<br>
+      <strong>Online:</strong> ${navigator.onLine}<br>
+      <strong>URL:</strong> ${window.location.href}<br>
+      <strong>Host:</strong> ${window.location.host}<br>
+      <strong>Protocol:</strong> ${window.location.protocol}
+    `;
+
+    console.log('Device info loaded');
+
+    // Test API connection
+    async function testConnection() {
+      const resultDiv = document.getElementById('connection-result');
+      resultDiv.innerHTML = '<span class="text-gray-600">Testing connection...</span>';
+
+      try {
+        const apiUrl = `${window.location.protocol}//${window.location.host}/api/auth/check?email=test@test.com`;
+        console.log('Testing connection to:', apiUrl);
+
+        const response = await fetch(apiUrl, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+
+        console.log('Response status:', response.status);
+        const data = await response.json();
+        console.log('Response data:', JSON.stringify(data));
+
+        resultDiv.innerHTML = `
+          <div class="text-green-600">
+            ✅ <strong>Connection successful!</strong><br>
+            Status: ${response.status}<br>
+            Response: ${JSON.stringify(data, null, 2)}
+          </div>
+        `;
+      } catch (error) {
+        console.error('Connection test failed:', error.message);
+        resultDiv.innerHTML = `
+          <div class="text-red-600">
+            ❌ <strong>Connection failed!</strong><br>
+            Error: ${error.message}
+          </div>
+        `;
+      }
+    }
+
+    // Test login
+    async function testLogin() {
+      const resultDiv = document.getElementById('login-result');
+      resultDiv.innerHTML = '<span class="text-gray-600">Testing login...</span>';
+
+      try {
+        const apiUrl = `${window.location.protocol}//${window.location.host}/api/auth/login`;
+        console.log('Testing login to:', apiUrl);
+
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({
+            email: 'asadeq@viftraining.com',
+            password: 'test123'
+          })
+        });
+
+        console.log('Login response status:', response.status);
+        const data = await response.json();
+        console.log('Login response data:', JSON.stringify(data));
+
+        if (response.ok) {
+          resultDiv.innerHTML = `
+            <div class="text-green-600">
+              ✅ <strong>Login successful!</strong><br>
+              User: ${data.user.name}<br>
+              Email: ${data.user.email}<br>
+              Role: ${data.user.role}
+            </div>
+          `;
+        } else {
+          resultDiv.innerHTML = `
+            <div class="text-red-600">
+              ❌ <strong>Login failed!</strong><br>
+              Message: ${data.message || 'Unknown error'}
+            </div>
+          `;
+        }
+      } catch (error) {
+        console.error('Login test failed:', error.message);
+        resultDiv.innerHTML = `
+          <div class="text-red-600">
+            ❌ <strong>Login failed!</strong><br>
+            Error: ${error.message}
+          </div>
+        `;
+      }
+    }
+
+    console.log('Test page ready');
+  </script>
+</body>
+</html>

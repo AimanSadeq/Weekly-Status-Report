@@ -1,0 +1,48 @@
+{
+  "name": "vif-activity-tracker",
+  "version": "2.0.0",
+  "description": "VIF Training Employee Activity Tracking System with Email Notifications and Mobile Support",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "nodemon server/index.js",
+    "build": "react-scripts build",
+    "test": "node test-api.js",
+    "init-db": "node server/init-db.js",
+    "quick-start": "node quick-start.js"
+  },
+  "keywords": [
+    "activity-tracker",
+    "employee-management",
+    "react",
+    "express",
+    "replit"
+  ],
+  "author": "VIF Training",
+  "license": "MIT",
+  "dependencies": {
+    "@replit/database": "^2.0.5",
+    "@sendgrid/mail": "^7.7.0",
+    "@supabase/supabase-js": "^2.75.1",
+    "body-parser": "^1.20.2",
+    "compression": "^1.7.4",
+    "cors": "^2.8.5",
+    "date-fns": "^2.30.0",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.1.5",
+    "helmet": "^7.1.0",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/vif-activity-tracker.git"
+  }
+}

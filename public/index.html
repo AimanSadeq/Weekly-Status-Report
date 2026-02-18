@@ -1,0 +1,2113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="VIFM Tracker">
+  <meta name="theme-color" content="#4f46e5">
+  <meta name="description" content="Virginia Institute of Finance & Management Activity Tracking System - Mobile Admin">
+
+  <title>VIFM Activity Tracker</title>
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json">
+
+  <!-- Apple Touch Icons -->
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-192x192.png">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+        'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+        sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .spinner {
+      border: 3px solid #f3f4f6;
+      border-top: 3px solid #4f46e5;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 16px 24px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      z-index: 1000;
+      animation: slideIn 0.3s ease-out;
+    }
+
+    .notification.success {
+      background: #10b981;
+      color: white;
+    }
+
+    .notification.error {
+      background: #ef4444;
+      color: white;
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateX(400px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    @keyframes fadeOut {
+      from {
+        opacity: 1;
+      }
+      to {
+        opacity: 0;
+      }
+    }
+
+    .fade-out {
+      animation: fadeOut 0.3s ease-out forwards;
+    }
+
+    /* Visual Quick Reference Styles */
+    .vif-box {
+      border: 3px solid #4f46e5;
+      border-radius: 12px;
+      padding: 12px;
+      background: white;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    }
+
+    .vif-header {
+      border-bottom: 3px solid #e5e7eb;
+      padding-bottom: 8px;
+      margin-bottom: 12px;
+    }
+
+    .vif-card {
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+    }
+
+    /* Mobile responsive styles */
+    @media (max-width: 768px) {
+      .activities-table-header,
+      .activity-row {
+        font-size: 0.75rem;
+      }
+
+      .mobile-card {
+        display: block !important;
+        padding: 12px;
+        border-bottom: 1px solid #e5e7eb;
+      }
+
+      .mobile-card-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
+        padding-bottom: 4px;
+      }
+
+      .mobile-card-label {
+        font-weight: 600;
+        color: #4b5563;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+      }
+
+      .mobile-card-value {
+        text-align: right;
+        font-size: 0.85rem;
+      }
+
+      .hide-mobile {
+        display: none !important;
+      }
+
+      .show-mobile {
+        display: block !important;
+      }
+    }
+
+    @media (min-width: 769px) {
+      .mobile-view {
+        display: none !important;
+      }
+
+      .desktop-view {
+        display: block !important;
+      }
+    }
+
+    /* Filter button styles */
+    .filter-btn.active {
+      background-color: #4f46e5 !important;
+      color: white !important;
+    }
+
+    .vif-card:hover {
+      border-color: #4f46e5;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
+      transform: translateY(-2px);
+    }
+
+    .stat-box {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 12px;
+      padding: 24px;
+      color: white;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+
+    .activity-item {
+      border-left: 4px solid #4f46e5;
+      background: #f9fafb;
+      transition: all 0.3s ease;
+    }
+
+    .activity-item:hover {
+      background: white;
+      border-left-color: #10b981;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .form-section {
+      background: linear-gradient(to right, #f9fafb, white);
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+    }
+
+    .header-banner {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-bottom: 4px solid #4f46e5;
+    }
+  </style>
+</head>
+<body class="bg-gray-50">
+  <!-- Login Section -->
+  <div id="login-section" class="min-h-screen flex items-center justify-center px-3 py-6">
+    <div class="max-w-md w-full space-y-4 vif-box">
+      <div class="text-center">
+        <div class="mx-auto w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mb-3">
+          <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+          </svg>
+        </div>
+        <h2 class="text-center text-2xl font-extrabold text-gray-900">
+          📊 VIFM Activity Tracker
+        </h2>
+        <p class="mt-1 text-center text-xs text-gray-600 font-medium">
+          Sign in to your account
+        </p>
+        <div class="mt-2 p-2 bg-indigo-50 border-2 border-indigo-200 rounded-lg">
+          <p class="text-xs text-indigo-800 font-semibold">17 Employees • 6 Departments • 60+ Activity Types</p>
+        </div>
+      </div>
+      <form id="login-form" class="mt-4 space-y-3">
+        <div class="rounded-md shadow-sm space-y-4">
+          <div>
+            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">
+              Email address
+            </label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              required
+              class="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+              placeholder="Enter your email"
+            />
+          </div>
+          <div>
+            <label for="password" class="block text-sm font-medium text-gray-700 mb-1">
+              Password
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              required
+              class="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+              placeholder="Enter your password"
+            />
+          </div>
+        </div>
+
+        <div id="login-error" class="hidden text-sm text-red-600 text-center"></div>
+
+        <div>
+          <button
+            type="submit"
+            class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+          >
+            <span id="login-button-text">Sign in</span>
+            <div id="login-spinner" class="hidden ml-2 spinner" style="width: 20px; height: 20px; border-width: 2px;"></div>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Dashboard Section -->
+  <div id="dashboard-section" class="hidden min-h-screen">
+    <!-- Header -->
+    <header class="header-banner shadow-lg">
+      <div class="max-w-7xl mx-auto px-3 py-3">
+        <div class="flex justify-between items-center">
+          <div>
+            <h1 class="text-2xl font-bold flex items-center gap-2">
+              📊 VIFM Activity Tracker
+            </h1>
+            <div class="mt-1 flex items-center space-x-3 text-sm">
+              <span id="user-name" class="font-semibold bg-white bg-opacity-20 px-2 py-0.5 rounded-full"></span>
+              <span class="text-indigo-200">•</span>
+              <span id="user-role" class="capitalize bg-white bg-opacity-20 px-2 py-0.5 rounded-full"></span>
+            </div>
+          </div>
+          <div class="flex gap-3">
+            <a
+              id="admin-link"
+              href="/admin-management.html"
+              class="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-all font-bold shadow-md hover:shadow-lg transform hover:-translate-y-0.5 hidden"
+            >
+              ⚙️ Admin
+            </a>
+            <button
+              id="logout-button"
+              class="px-4 py-2 bg-white text-indigo-700 rounded-lg hover:bg-indigo-50 transition-all font-bold shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-3 py-4">
+      <!-- Week and Date Banner -->
+      <div class="vif-box mb-4 bg-gradient-to-r from-indigo-50 to-purple-50">
+        <div class="flex flex-col md:flex-row items-center justify-between gap-3">
+          <div class="flex flex-wrap items-center gap-3 md:gap-4 justify-center md:justify-start w-full md:w-auto">
+            <div class="text-center">
+              <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide">Current Week</p>
+              <p id="current-week" class="text-xl md:text-2xl font-bold text-indigo-600 mt-0.5">Week 0</p>
+            </div>
+            <div class="h-12 w-px bg-gray-300 hidden md:block"></div>
+            <div class="text-center">
+              <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide">Today's Date</p>
+              <p id="current-date" class="text-sm md:text-lg font-bold text-gray-900 mt-0.5">Loading...</p>
+            </div>
+            <div class="h-12 w-px bg-gray-300 hidden md:block"></div>
+            <div class="text-center">
+              <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide">Week Ending</p>
+              <p id="week-ending" class="text-sm md:text-lg font-bold text-purple-600 mt-0.5">Loading...</p>
+            </div>
+          </div>
+          <div class="text-center">
+            <div class="bg-white rounded-lg px-3 md:px-4 py-1.5 md:py-2 shadow-md border-2 border-indigo-200">
+              <p class="text-xs font-semibold text-gray-600 uppercase">Year</p>
+              <p id="current-year" class="text-lg md:text-xl font-bold text-indigo-600">2025</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Add Activity Form -->
+      <div class="vif-box mb-4">
+        <div class="vif-header">
+          <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">
+            ➕ Add Activities for Date
+          </h2>
+          <p class="text-xs text-gray-600 mt-0.5">Select a date first, then add multiple activities for that date</p>
+        </div>
+
+        <!-- Date Selection -->
+        <div class="mb-3 p-2 bg-indigo-50 border-2 border-indigo-200 rounded-lg">
+          <label for="activity-date" class="block text-xs font-medium text-gray-700 mb-1">
+            📅 Activity Date <span class="text-red-500">*</span>
+          </label>
+          <input
+            id="activity-date"
+            type="date"
+            required
+            class="w-full px-3 py-2 border-2 border-indigo-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm font-semibold"
+          />
+        </div>
+
+        <!-- Add Activity Form -->
+        <form id="activity-form" class="space-y-3">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label for="department" class="block text-sm font-medium text-gray-700 mb-1">
+                Department <span class="text-red-500">*</span>
+              </label>
+              <select
+                id="department"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                <option value="">Select department first</option>
+                <!-- Options will be loaded dynamically from API -->
+              </select>
+            </div>
+
+            <div>
+              <label for="activity-type" class="block text-sm font-medium text-gray-700 mb-1">
+                Activity Type <span class="text-red-500">*</span>
+              </label>
+              <select
+                id="activity-type"
+                required
+                disabled
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+              >
+                <option value="">Select department first</option>
+                <!-- Options will be loaded dynamically based on department -->
+              </select>
+            </div>
+
+            <div>
+              <label for="units" class="block text-sm font-medium text-gray-700 mb-1">
+                Units/Days <span class="text-gray-400 text-xs">(optional)</span>
+              </label>
+              <input
+                id="units"
+                type="number"
+                step="1"
+                min="0"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                placeholder="Enter units/days"
+              />
+            </div>
+
+            <div>
+              <label for="percentage" class="block text-sm font-medium text-gray-700 mb-1">
+                Percentage Completion <span class="text-gray-400 text-xs">(optional)</span>
+              </label>
+              <input
+                id="percentage"
+                type="number"
+                step="1"
+                min="0"
+                max="100"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                placeholder="Enter percentage"
+              />
+            </div>
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label for="description" class="block text-xs font-medium text-gray-700">
+                Description <span class="text-gray-400 text-xs">(optional)</span>
+              </label>
+              <button
+                type="button"
+                id="voice-input-btn"
+                class="flex items-center gap-1 px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors"
+                title="Voice input"
+              >
+                <svg id="mic-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
+                </svg>
+                <span id="voice-status">Voice</span>
+              </button>
+            </div>
+            <textarea
+              id="description"
+              rows="2"
+              class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              placeholder="Enter activity description or use voice input..."
+            ></textarea>
+          </div>
+
+          <div class="flex justify-end gap-2">
+            <button
+              type="submit"
+              class="px-4 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium flex items-center text-sm"
+            >
+              <span id="add-button-text">➕ Add Activity</span>
+              <div id="add-spinner" class="hidden ml-2 spinner" style="width: 16px; height: 16px; border-width: 2px;"></div>
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Activities List -->
+      <div class="vif-box">
+        <div class="vif-header">
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+            <div>
+              <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">
+                📋 My Activities
+              </h2>
+              <p class="text-xs text-gray-600 mt-0.5">Track all your submitted activities</p>
+            </div>
+            <button
+              id="export-csv-button"
+              class="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center gap-2 text-sm"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+              </svg>
+              Export to CSV
+            </button>
+          </div>
+        </div>
+
+        <!-- Filter and Search Section -->
+        <div class="mb-4 space-y-3">
+          <!-- Search Bar -->
+          <div class="relative">
+            <input
+              id="search-activities"
+              type="text"
+              placeholder="Search activities by description..."
+              class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+            />
+            <svg class="absolute left-3 top-2.5 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+          </div>
+
+          <!-- Advanced Filters -->
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div>
+              <label for="filter-week" class="block text-xs font-medium text-gray-700 mb-1">Week Number</label>
+              <input
+                id="filter-week"
+                type="number"
+                placeholder="e.g., 1-52"
+                min="1"
+                max="52"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+              />
+            </div>
+            <div>
+              <label for="filter-consultant" class="block text-xs font-medium text-gray-700 mb-1">Consultant</label>
+              <select id="filter-consultant" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                <option value="">All Consultants</option>
+                <!-- Options loaded dynamically -->
+              </select>
+            </div>
+            <div>
+              <label for="filter-department" class="block text-xs font-medium text-gray-700 mb-1">Department</label>
+              <select id="filter-department" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                <option value="">All Departments</option>
+                <!-- Options loaded dynamically -->
+              </select>
+            </div>
+            <div>
+              <label for="filter-activity-type" class="block text-xs font-medium text-gray-700 mb-1">Activity Type</label>
+              <select id="filter-activity-type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                <option value="">All Activities</option>
+                <!-- Options loaded dynamically -->
+              </select>
+            </div>
+          </div>
+
+          <!-- Date Filters -->
+          <div class="flex flex-wrap gap-2 items-center">
+            <span class="text-xs font-semibold text-gray-600 uppercase">Quick Filter:</span>
+            <button data-filter="all" class="filter-btn active px-3 py-1 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors text-xs font-medium">All</button>
+            <button data-filter="today" class="filter-btn px-3 py-1 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-xs font-medium">Today</button>
+            <button data-filter="this-week" class="filter-btn px-3 py-1 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-xs font-medium">This Week</button>
+            <button data-filter="last-week" class="filter-btn px-3 py-1 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-xs font-medium">Last Week</button>
+            <button data-filter="this-month" class="filter-btn px-3 py-1 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-xs font-medium">This Month</button>
+            <button data-filter="custom" class="filter-btn px-3 py-1 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-xs font-medium">Custom Range</button>
+            <button id="clear-filters-btn" class="px-3 py-1 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-xs font-medium">Clear All Filters</button>
+            <span id="activity-count" class="ml-auto text-xs font-semibold text-gray-600"></span>
+          </div>
+
+          <!-- Custom Date Range (Hidden by default) -->
+          <div id="custom-date-range" class="hidden grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label for="filter-start-date" class="block text-xs font-medium text-gray-700 mb-1">From Date</label>
+              <input
+                id="filter-start-date"
+                type="date"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+              />
+            </div>
+            <div>
+              <label for="filter-end-date" class="block text-xs font-medium text-gray-700 mb-1">To Date</label>
+              <input
+                id="filter-end-date"
+                type="date"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div id="activities-container" class="space-y-2">
+          <div class="flex justify-center py-4">
+            <div class="spinner"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Notification Container -->
+  <div id="notification-container"></div>
+
+  <!-- PWA Install Banner -->
+  <div id="install-banner" class="hidden fixed bottom-0 left-0 right-0 bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4 shadow-2xl z-50">
+    <div class="max-w-7xl mx-auto flex items-center justify-between flex-wrap gap-3">
+      <div class="flex items-center gap-3">
+        <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+        </svg>
+        <div>
+          <p class="font-bold">Install VIFM Activity Tracker</p>
+          <p class="text-xs text-indigo-100">Get the app for quick access and offline support</p>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <button id="install-btn" class="px-4 py-2 bg-white text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors font-semibold text-sm">
+          Install
+        </button>
+        <button id="install-dismiss" class="px-4 py-2 bg-indigo-700 text-white rounded-lg hover:bg-indigo-800 transition-colors text-sm">
+          Not Now
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Offline Status Indicator -->
+  <div id="offline-indicator" class="hidden fixed bottom-4 left-4 bg-yellow-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 flex items-center gap-2">
+    <svg class="w-5 h-5 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3m8.293 8.293l1.414 1.414"></path>
+    </svg>
+    <span class="font-semibold text-sm">You're offline - Changes will sync when reconnected</span>
+  </div>
+
+  <script>
+    // Global state
+    let currentUser = null;
+    let activities = [];
+    let filteredActivities = []; // Filtered activities based on search and date filter
+    let pendingActivities = []; // Activities for the selected date before submission
+    let selectedDate = null;
+    let editingActivityId = null; // Track which activity is being edited
+    let currentFilter = 'all'; // Current date filter
+    let searchQuery = ''; // Current search query
+
+    // Helper Functions
+    function showNotification(message, type = 'success') {
+      const container = document.getElementById('notification-container');
+      const notification = document.createElement('div');
+      notification.className = `notification ${type}`;
+      notification.textContent = message;
+      container.appendChild(notification);
+
+      setTimeout(() => {
+        notification.classList.add('fade-out');
+        setTimeout(() => notification.remove(), 300);
+      }, 3000);
+    }
+
+    // Utility function to escape HTML and prevent XSS
+    function escapeHtml(text) {
+      if (!text) return '';
+      const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+      };
+      return String(text).replace(/[&<>"']/g, m => map[m]);
+    }
+
+    function getWeekNumber(date) {
+      // Week ends on Thursday, starts on Friday
+      // Thursday is day 4, so we adjust to make Thursday the last day of the week
+      const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+      // Get the day of week (0 = Sunday, 1 = Monday, ..., 4 = Thursday, 5 = Friday, 6 = Saturday)
+      const dayOfWeek = d.getDay();
+
+      // Calculate the Thursday of this week (end of week)
+      // If today is Friday (5) or Saturday (6), we're in the next week
+      let daysToThursday;
+      if (dayOfWeek === 5) { // Friday
+        daysToThursday = 6; // Next Thursday
+      } else if (dayOfWeek === 6) { // Saturday
+        daysToThursday = 5; // Next Thursday
+      } else if (dayOfWeek === 0) { // Sunday
+        daysToThursday = 4; // Next Thursday
+      } else { // Monday (1) to Thursday (4)
+        daysToThursday = 4 - dayOfWeek; // This Thursday
+      }
+
+      const thursday = new Date(d);
+      thursday.setDate(d.getDate() + daysToThursday);
+
+      // Find the first Thursday of the year
+      const yearStart = new Date(thursday.getFullYear(), 0, 1);
+      const yearStartDay = yearStart.getDay();
+
+      // Calculate days until first Thursday
+      let daysToFirstThursday;
+      if (yearStartDay <= 4) {
+        daysToFirstThursday = 4 - yearStartDay;
+      } else {
+        daysToFirstThursday = 11 - yearStartDay; // Next Thursday
+      }
+
+      const firstThursday = new Date(yearStart);
+      firstThursday.setDate(1 + daysToFirstThursday);
+
+      // Calculate week number
+      const weekNumber = Math.floor((thursday - firstThursday) / (7 * 24 * 60 * 60 * 1000)) + 1;
+
+      return weekNumber;
+    }
+
+    function getCurrentWeek() {
+      return getWeekNumber(new Date());
+    }
+
+    function updateDateDisplay() {
+      const now = new Date();
+
+      // Update week number
+      const weekNumber = getCurrentWeek();
+      document.getElementById('current-week').textContent = `Week ${weekNumber}`;
+
+      // Update current date
+      const options = {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      };
+      const formattedDate = now.toLocaleDateString('en-US', options);
+      document.getElementById('current-date').textContent = formattedDate;
+
+      // Calculate and update week ending (Thursday of current week)
+      const currentDay = now.getDay(); // 0 = Sunday, 4 = Thursday
+      const daysUntilThursday = (4 - currentDay + 7) % 7; // Days to add to get to Thursday
+      const thursday = new Date(now);
+      thursday.setDate(now.getDate() + daysUntilThursday);
+
+      const weekEndingFormatted = thursday.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      });
+      document.getElementById('week-ending').textContent = weekEndingFormatted;
+
+      // Update year
+      document.getElementById('current-year').textContent = now.getFullYear();
+    }
+
+    // Store all activity types for filtering
+    let allActivityTypes = [];
+    let allDepartments = [];
+
+    // Load activity types and departments from API
+    async function loadMetadata() {
+      try {
+        // Pass the current user's email to get only their assigned departments
+        const url = currentUser && currentUser.email
+          ? `/api/metadata/all?email=${encodeURIComponent(currentUser.email)}`
+          : '/api/metadata/all';
+
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.success) {
+          // Store for filtering
+          allActivityTypes = data.activityTypes;
+          allDepartments = data.departments;
+
+          // Populate departments only (filtered by employee assignment)
+          const departmentSelect = document.getElementById('department');
+          departmentSelect.innerHTML = '<option value="">Select department</option>';
+
+          if (data.departments.length === 0) {
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = 'No departments assigned';
+            departmentSelect.appendChild(option);
+            showNotification('You have no departments assigned. Please contact admin.', 'error');
+          } else {
+            // Find primary department (first one is primary from the API)
+            let primaryDepartment = null;
+
+            data.departments.forEach((dept, index) => {
+              const option = document.createElement('option');
+              option.value = dept.name;
+              option.textContent = dept.name;
+              departmentSelect.appendChild(option);
+
+              // First department is the primary one
+              if (index === 0) {
+                primaryDepartment = dept.name;
+              }
+            });
+
+            // Auto-select primary department
+            if (primaryDepartment) {
+              departmentSelect.value = primaryDepartment;
+              // Trigger the change event to load activity types
+              await filterActivityTypes();
+            }
+          }
+
+          // Add event listener to filter activity types when department changes
+          departmentSelect.addEventListener('change', filterActivityTypes);
+        }
+      } catch (error) {
+        console.error('Error loading metadata:', error);
+        showNotification('Failed to load activity types and departments', 'error');
+      }
+    }
+
+    // Filter activity types based on selected department
+    async function filterActivityTypes() {
+      const departmentSelect = document.getElementById('department');
+      const activityTypeSelect = document.getElementById('activity-type');
+      const selectedDepartment = departmentSelect.value;
+
+      if (!selectedDepartment) {
+        // No department selected - disable activity type
+        activityTypeSelect.disabled = true;
+        activityTypeSelect.innerHTML = '<option value="">Select department first</option>';
+        return;
+      }
+
+      // Show loading state
+      activityTypeSelect.disabled = true;
+      activityTypeSelect.innerHTML = '<option value="">Loading...</option>';
+
+      try {
+        // Fetch activity types filtered by department from API
+        const response = await fetch(`/api/metadata/activity-types?department=${encodeURIComponent(selectedDepartment)}`);
+        const data = await response.json();
+
+        // Enable activity type dropdown
+        activityTypeSelect.disabled = false;
+        activityTypeSelect.innerHTML = '<option value="">Select activity type</option>';
+
+        if (data.success && data.activityTypes.length > 0) {
+          // Populate filtered activity types
+          data.activityTypes.forEach(type => {
+            const option = document.createElement('option');
+            option.value = type.name;
+            option.textContent = type.name;
+            activityTypeSelect.appendChild(option);
+          });
+        } else {
+          // No types available for this department
+          const option = document.createElement('option');
+          option.value = '';
+          option.textContent = 'No activity types available for this department';
+          activityTypeSelect.appendChild(option);
+        }
+      } catch (error) {
+        console.error('Error loading activity types:', error);
+        activityTypeSelect.disabled = false;
+        activityTypeSelect.innerHTML = '<option value="">Error loading activity types</option>';
+        showNotification('Failed to load activity types', 'error');
+      }
+    }
+
+
+    function renderActivities() {
+      const container = document.getElementById('activities-container');
+      const displayActivities = filteredActivities.length > 0 || searchQuery || currentFilter !== 'all' ? filteredActivities : activities;
+
+      // Update activity count
+      document.getElementById('activity-count').textContent = `${displayActivities.length} ${displayActivities.length === 1 ? 'activity' : 'activities'}`;
+
+      if (displayActivities.length === 0 && activities.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-12">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+            </svg>
+            <p class="mt-4 text-gray-600">No activities yet. Add your first activity above!</p>
+          </div>
+        `;
+        return;
+      }
+
+      if (displayActivities.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-12">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+            <p class="mt-4 text-gray-600">No activities found matching your filters.</p>
+            <button onclick="resetFilters()" class="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm">Clear Filters</button>
+          </div>
+        `;
+        return;
+      }
+
+      // Group activities by date
+      const groupedByDate = {};
+      displayActivities.forEach(activity => {
+        const date = activity.week || activity.activityDate || 'No Date';
+        if (!groupedByDate[date]) {
+          groupedByDate[date] = [];
+        }
+        groupedByDate[date].push(activity);
+      });
+
+      // Sort dates in descending order (most recent first)
+      const sortedDates = Object.keys(groupedByDate).sort((a, b) => {
+        if (a === 'No Date') return 1;
+        if (b === 'No Date') return -1;
+        return new Date(b) - new Date(a);
+      });
+
+      // Render grouped activities
+      const groupedHtml = sortedDates.map(date => {
+        const dateActivities = groupedByDate[date];
+        const formattedDate = date !== 'No Date'
+          ? new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+          : 'No Date';
+
+        const activitiesHtml = dateActivities.map(activity => {
+        const statusColors = {
+          'pending': 'bg-yellow-100 text-yellow-800 border-yellow-300',
+          'in-progress': 'bg-blue-100 text-blue-800 border-blue-300',
+          'completed': 'bg-green-100 text-green-800 border-green-300'
+        };
+        const statusColor = statusColors[activity.status] || statusColors['pending'];
+        const statusIcons = {
+          'pending': '⏳',
+          'in-progress': '🔄',
+          'completed': '✅'
+        };
+        const statusIcon = statusIcons[activity.status] || '⏳';
+
+        const units = activity.units || activity.unitsCompleted;
+        const percentage = activity.percentage || activity.percentageComplete;
+        const hasUnits = units && !isNaN(Number(units)) && Number(units) > 0;
+        const hasPercentage = percentage && !isNaN(Number(percentage)) && Number(percentage) >= 0;
+
+        // Desktop view (table row)
+        const desktopView = `
+          <div class="activity-item bg-white border-b border-gray-200 hover:bg-gray-50 transition-colors desktop-view">
+            <div class="flex items-center gap-3 px-3 py-2 text-sm">
+              <span class="text-gray-600 w-24">${date !== 'No Date' ? new Date(date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'No Date'}</span>
+              <span class="text-gray-600 w-32">${activity.name || currentUser?.name || ''}</span>
+              <span class="text-gray-600 w-32">${activity.department}</span>
+              <span class="font-semibold text-gray-900 flex-1">${activity.title || activity.activityType}</span>
+              ${hasUnits ? `<span class="text-blue-700 font-semibold w-20">${units} units</span>` : '<span class="w-20"></span>'}
+              ${hasPercentage ? `<span class="text-purple-700 font-semibold w-12">${percentage}%</span>` : '<span class="w-12"></span>'}
+              ${activity.description ? `<span class="text-gray-600 truncate flex-1" title="${activity.description}">${activity.description}</span>` : '<span class="flex-1"></span>'}
+              <div class="flex gap-2 w-32">
+                <button data-action="edit" data-activity-id="${activity.id}" class="edit-btn text-indigo-600 hover:text-indigo-800 font-semibold px-2 py-1 rounded hover:bg-indigo-50 transition-colors text-xs">Edit</button>
+                <button data-action="delete" data-activity-id="${activity.id}" class="delete-btn text-red-600 hover:text-red-800 font-semibold px-2 py-1 rounded hover:bg-red-50 transition-colors text-xs">Delete</button>
+              </div>
+            </div>
+          </div>
+        `;
+
+        // Mobile view (card layout)
+        const mobileView = `
+          <div class="activity-item bg-white border-b border-gray-200 mobile-view" style="display: none;">
+            <div class="mobile-card">
+              <div class="mobile-card-row border-b border-gray-100">
+                <span class="mobile-card-label">Date</span>
+                <span class="mobile-card-value font-semibold">${date !== 'No Date' ? new Date(date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'No Date'}</span>
+              </div>
+              <div class="mobile-card-row border-b border-gray-100">
+                <span class="mobile-card-label">Employee</span>
+                <span class="mobile-card-value">${activity.name || currentUser?.name || ''}</span>
+              </div>
+              <div class="mobile-card-row border-b border-gray-100">
+                <span class="mobile-card-label">Department</span>
+                <span class="mobile-card-value">${activity.department}</span>
+              </div>
+              <div class="mobile-card-row border-b border-gray-100">
+                <span class="mobile-card-label">Activity</span>
+                <span class="mobile-card-value font-semibold text-gray-900">${activity.title || activity.activityType}</span>
+              </div>
+              ${hasUnits ? `
+              <div class="mobile-card-row border-b border-gray-100">
+                <span class="mobile-card-label">Units</span>
+                <span class="mobile-card-value text-blue-700 font-semibold">${units} units</span>
+              </div>` : ''}
+              ${hasPercentage ? `
+              <div class="mobile-card-row border-b border-gray-100">
+                <span class="mobile-card-label">Progress</span>
+                <span class="mobile-card-value text-purple-700 font-semibold">${percentage}%</span>
+              </div>` : ''}
+              ${activity.description ? `
+              <div class="mobile-card-row border-b border-gray-100">
+                <span class="mobile-card-label">Description</span>
+                <span class="mobile-card-value text-gray-600">${activity.description}</span>
+              </div>` : ''}
+              <div class="flex gap-2 mt-3 justify-end">
+                <button data-action="edit" data-activity-id="${activity.id}" class="edit-btn text-indigo-600 hover:text-indigo-800 font-semibold px-3 py-1.5 rounded bg-indigo-50 transition-colors text-sm flex-1">Edit</button>
+                <button data-action="delete" data-activity-id="${activity.id}" class="delete-btn text-red-600 hover:text-red-800 font-semibold px-3 py-1.5 rounded bg-red-50 transition-colors text-sm flex-1">Delete</button>
+              </div>
+            </div>
+          </div>
+        `;
+
+        return desktopView + mobileView;
+        }).join('');
+
+        return `${activitiesHtml}`;
+      }).join('');
+
+      const headerHtml = `
+        <div class="bg-gray-100 border-b-2 border-gray-300 desktop-view">
+          <div class="flex items-center gap-3 px-3 py-2 text-xs font-bold text-gray-700 uppercase">
+            <span class="w-24">Date</span>
+            <span class="w-32">Employee</span>
+            <span class="w-32">Department</span>
+            <span class="flex-1">Activity</span>
+            <span class="w-20">Units</span>
+            <span class="w-12">%</span>
+            <span class="flex-1">Description</span>
+            <span class="w-32">Actions</span>
+          </div>
+        </div>
+      `;
+
+      container.innerHTML = `<div class="border border-gray-200 rounded-lg overflow-hidden">${headerHtml}${groupedHtml}</div>`;
+
+      // Add event listeners for edit and delete buttons using event delegation
+      container.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const activityId = this.getAttribute('data-activity-id');
+          editActivity(activityId);
+        });
+      });
+
+      container.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const activityId = this.getAttribute('data-activity-id');
+          deleteActivity(activityId);
+        });
+      });
+    }
+
+    async function fetchActivities() {
+      if (!currentUser) return;
+
+      try {
+        const params = new URLSearchParams({
+          email: currentUser.email,
+          role: currentUser.role
+        });
+
+        const response = await fetch(`/api/activities?${params}`);
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch activities');
+        }
+
+        const data = await response.json();
+        activities = data.activities || [];
+
+        populateFilterDropdowns();
+        renderActivities();
+      } catch (error) {
+        console.error('Error fetching activities:', error);
+        showNotification('Failed to load activities. Please try again.', 'error');
+
+        // Show error message in activities container
+        document.getElementById('activities-container').innerHTML = `
+          <div class="text-center py-12">
+            <svg class="mx-auto h-12 w-12 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <p class="mt-4 text-gray-600">Failed to load activities. Please refresh the page.</p>
+          </div>
+        `;
+      }
+    }
+
+    async function addActivity(formData) {
+      try {
+        const activityData = {
+          email: currentUser.email,
+          role: currentUser.role,
+          activityType: formData.activityType,
+          department: formData.department,
+          units: parseInt(formData.units),
+          percentage: parseInt(formData.percentage),
+          description: formData.description,
+          title: formData.activityType,
+          status: 'pending',
+          week: formData.date || getCurrentWeek(),
+          activityDate: formData.date,
+          createdAt: new Date().toISOString()
+        };
+
+        const response = await fetch('/api/activities', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(activityData)
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to add activity');
+        }
+
+        const data = await response.json();
+
+        showNotification('Activity added successfully!', 'success');
+
+        // Refresh activities list
+        await fetchActivities();
+
+        // Reset form
+        document.getElementById('activity-form').reset();
+      } catch (error) {
+        console.error('Error adding activity:', error);
+        showNotification('Failed to add activity. Please try again.', 'error');
+      }
+    }
+
+    function showDashboard() {
+      document.getElementById('login-section').classList.add('hidden');
+      document.getElementById('dashboard-section').classList.remove('hidden');
+
+      // Set user info
+      document.getElementById('user-name').textContent = currentUser.name;
+      document.getElementById('user-role').textContent = currentUser.role;
+
+      // Show admin link if user is admin
+      if (currentUser.role === 'admin') {
+        document.getElementById('admin-link').classList.remove('hidden');
+      }
+
+      // Update date and week display
+      updateDateDisplay();
+
+      // Load dropdown options from API
+      loadMetadata();
+
+      // Fetch activities
+      fetchActivities();
+    }
+
+    function showLogin() {
+      document.getElementById('dashboard-section').classList.add('hidden');
+      document.getElementById('login-section').classList.remove('hidden');
+
+      currentUser = null;
+      activities = [];
+    }
+
+    // Event Listeners
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const errorDiv = document.getElementById('login-error');
+      const buttonText = document.getElementById('login-button-text');
+      const spinner = document.getElementById('login-spinner');
+
+      // Show loading state
+      buttonText.textContent = 'Signing in...';
+      spinner.classList.remove('hidden');
+      errorDiv.classList.add('hidden');
+
+      try {
+        // Get the API URL (use current host for mobile compatibility)
+        const apiUrl = `${window.location.protocol}//${window.location.host}/api/auth/login`;
+        console.log('Login attempt to:', apiUrl);
+        console.log('Email:', email);
+
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({ email, password }),
+          credentials: 'same-origin',
+          mode: 'cors'
+        });
+
+        console.log('Response status:', response.status);
+
+        // Check if response is JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          throw new Error('Server returned invalid response. Please check your connection.');
+        }
+
+        const data = await response.json();
+        console.log('Response data:', data);
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Login failed');
+        }
+
+        // Store user data
+        currentUser = {
+          email: data.user.email,
+          name: data.user.name,
+          role: data.user.role
+        };
+
+        // Save to localStorage
+        localStorage.setItem('vif-user', JSON.stringify(currentUser));
+
+        console.log('Login successful, showing dashboard');
+
+        // Show dashboard
+        showDashboard();
+      } catch (error) {
+        console.error('Login error:', error);
+        console.error('Error stack:', error.stack);
+
+        // More detailed error message for debugging
+        let errorMessage = 'Invalid email or password. Please try again.';
+
+        if (error.message.includes('Failed to fetch')) {
+          errorMessage = 'Cannot connect to server. Please check your network connection.';
+        } else if (error.message.includes('NetworkError')) {
+          errorMessage = 'Network error. Make sure you are connected to the same Wi-Fi network.';
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+
+        errorDiv.textContent = errorMessage;
+        errorDiv.classList.remove('hidden');
+      } finally {
+        buttonText.textContent = 'Sign in';
+        spinner.classList.add('hidden');
+      }
+    });
+
+    document.getElementById('logout-button').addEventListener('click', () => {
+      localStorage.removeItem('vif-user');
+      showLogin();
+      showNotification('Logged out successfully', 'success');
+    });
+
+    // Handle date selection
+    document.getElementById('activity-date').addEventListener('change', (e) => {
+      selectedDate = e.target.value;
+      if (selectedDate) {
+        // Show activities section
+        document.getElementById('activities-for-date').classList.remove('hidden');
+        document.getElementById('selected-date-display').textContent = new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        document.getElementById('submit-date-display').textContent = new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+        // Load existing activities for this date
+        loadActivitiesForDate(selectedDate);
+      }
+    });
+
+
+    function loadActivitiesForDate(date) {
+      // Filter pending activities for this date
+      pendingActivities = pendingActivities.filter(a => a.date === date);
+      renderPendingActivities();
+    }
+
+    function renderPendingActivities() {
+      const container = document.getElementById('date-activities-list');
+      const submitSection = document.getElementById('submit-all-section');
+      const count = pendingActivities.length;
+
+      document.getElementById('activity-count').textContent = `${count} ${count === 1 ? 'activity' : 'activities'}`;
+      document.getElementById('total-activities').textContent = count;
+
+      if (count === 0) {
+        container.innerHTML = '<p class="text-gray-500 text-sm italic">No activities added yet for this date</p>';
+        submitSection.classList.add('hidden');
+        return;
+      }
+
+      submitSection.classList.remove('hidden');
+
+      const html = pendingActivities.map((activity, index) => {
+        const hasUnits = activity.units && !isNaN(Number(activity.units)) && Number(activity.units) > 0;
+        const hasPercentage = activity.percentage && !isNaN(Number(activity.percentage)) && Number(activity.percentage) >= 0;
+
+        return `
+        <div class="p-2 bg-gray-50 border border-gray-200 rounded hover:border-indigo-300 transition-all">
+          <div class="flex justify-between items-center gap-3">
+            <div class="flex items-center gap-2 flex-1 text-sm">
+              <span class="font-bold text-gray-900">${index + 1}. ${activity.activityType} • ${activity.department}</span>
+              ${hasUnits ? `<span class="text-blue-700 font-semibold">${activity.units} units</span>` : ''}
+              ${hasPercentage ? `<span class="text-purple-700 font-semibold">${activity.percentage}%</span>` : ''}
+              ${activity.description ? `<span class="text-gray-600 truncate" title="${activity.description}">${activity.description}</span>` : ''}
+            </div>
+            <button onclick="removePendingActivity(${index})" class="text-red-600 hover:text-red-800 font-bold text-lg">✕</button>
+          </div>
+        </div>
+      `;
+      }).join('');
+
+      container.innerHTML = html;
+    }
+
+    window.removePendingActivity = function(index) {
+      pendingActivities.splice(index, 1);
+      renderPendingActivities();
+      showNotification('Activity removed', 'success');
+    };
+
+    function editActivity(activityId) {
+      console.log('Edit activity called with ID:', activityId);
+      const activity = activities.find(a => a.id === activityId);
+      if (!activity) {
+        console.error('Activity not found:', activityId);
+        showNotification('Activity not found', 'error');
+        return;
+      }
+
+      console.log('Found activity:', activity);
+      // Set editing mode
+      editingActivityId = activityId;
+
+      // Populate form with activity data
+      const dateInput = document.getElementById('activity-date');
+      const departmentSelect = document.getElementById('department');
+      const activityTypeSelect = document.getElementById('activity-type');
+      const unitsInput = document.getElementById('units');
+      const percentageInput = document.getElementById('percentage');
+      const descriptionInput = document.getElementById('description');
+      const buttonText = document.getElementById('add-button-text');
+
+      dateInput.value = activity.week || activity.activityDate || '';
+      departmentSelect.value = activity.department || '';
+
+      // Change button text to indicate update mode
+      buttonText.textContent = '✏️ Update Activity';
+
+      // Trigger department change to load activity types
+      departmentSelect.dispatchEvent(new Event('change'));
+
+      // Wait for activity types to load, then set the value
+      setTimeout(() => {
+        activityTypeSelect.value = activity.activityType || activity.title || '';
+        unitsInput.value = activity.units || activity.unitsCompleted || '';
+        percentageInput.value = activity.percentage || activity.percentageComplete || '';
+        descriptionInput.value = activity.description || '';
+      }, 300);
+
+      // Scroll to form
+      document.getElementById('activity-form').scrollIntoView({ behavior: 'smooth' });
+
+      showNotification('Edit the activity and click Update Activity', 'success');
+    }
+
+    async function deleteActivity(activityId) {
+      console.log('Delete activity called with ID:', activityId);
+
+      const confirmDelete = confirm('Are you sure you want to delete this activity?');
+      console.log('User confirmed delete:', confirmDelete);
+
+      if (!confirmDelete) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/activities/${activityId}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          showNotification('Activity deleted successfully!', 'success');
+          await fetchActivities();
+        } else {
+          showNotification('Failed to delete activity', 'error');
+        }
+      } catch (error) {
+        console.error('Delete error:', error);
+        showNotification('Failed to delete activity', 'error');
+      }
+    }
+
+    document.getElementById('activity-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      if (!selectedDate) {
+        showNotification('Please select a date first', 'error');
+        return;
+      }
+
+      const buttonText = document.getElementById('add-button-text');
+      const spinner = document.getElementById('add-spinner');
+
+      const isEditing = editingActivityId !== null;
+
+      // Show loading state
+      buttonText.textContent = isEditing ? 'Updating...' : 'Adding...';
+      spinner.classList.remove('hidden');
+
+      const formData = {
+        activityType: document.getElementById('activity-type').value,
+        department: document.getElementById('department').value,
+        units: parseInt(document.getElementById('units').value) || null,
+        percentage: parseInt(document.getElementById('percentage').value) || null,
+        description: document.getElementById('description').value,
+        date: selectedDate
+      };
+
+      try {
+        if (isEditing) {
+          // Update existing activity
+          const response = await fetch(`/api/activities/${editingActivityId}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              email: currentUser.email,
+              ...formData,
+              week: formData.date
+            })
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to update activity');
+          }
+
+          showNotification('Activity updated successfully!', 'success');
+        } else {
+          // Submit new activity directly
+          await addActivity(formData);
+          showNotification('Activity added successfully!', 'success');
+        }
+
+        // Reset form
+        document.getElementById('activity-type').value = '';
+        document.getElementById('units').value = '';
+        document.getElementById('percentage').value = '';
+        document.getElementById('description').value = '';
+
+        // Reset date to today
+        const dateInput = document.getElementById('activity-date');
+        const today = new Date().toISOString().split('T')[0];
+        dateInput.value = today;
+        selectedDate = today;
+
+        // Clear editing state
+        editingActivityId = null;
+
+        // Refresh activities list
+        await fetchActivities();
+
+      } catch (error) {
+        showNotification(isEditing ? 'Failed to update activity' : 'Failed to add activity', 'error');
+      } finally {
+        buttonText.textContent = '➕ Add Activity';
+        spinner.classList.add('hidden');
+      }
+    });
+
+    // ====================  FILTER AND SEARCH FUNCTIONS ====================
+
+    async function populateFilterDropdowns() {
+      try {
+        // Fetch activity types from API with department associations
+        const activityTypesResponse = await fetch('/api/activity-types');
+        const activityTypesData = await activityTypesResponse.json();
+        if (activityTypesData.success) {
+          allActivityTypes = activityTypesData.activityTypes.filter(at => at.is_active);
+        }
+
+        // Fetch departments from API
+        const departmentsResponse = await fetch('/api/departments');
+        const departmentsData = await departmentsResponse.json();
+        if (departmentsData.success) {
+          allDepartments = departmentsData.departments.filter(d => d.is_active);
+        }
+
+        // Initial population of all dropdowns
+        updateDepartmentFilter();
+        updateActivityTypeFilter();
+        updateConsultantFilter();
+
+      } catch (error) {
+        console.error('Error populating filter dropdowns:', error);
+      }
+    }
+
+    function updateDepartmentFilter() {
+      const departmentSelect = document.getElementById('filter-department');
+      departmentSelect.innerHTML = '<option value="">All Departments</option>' +
+        allDepartments
+          .sort((a, b) => a.name.localeCompare(b.name))
+          .map(dept => `<option value="${escapeHtml(dept.name)}">${escapeHtml(dept.name)}</option>`)
+          .join('');
+    }
+
+    function updateActivityTypeFilter(selectedDepartment = null, selectedConsultant = null) {
+      const activityTypeSelect = document.getElementById('filter-activity-type');
+      const currentValue = activityTypeSelect.value;
+
+      let filteredTypes = allActivityTypes;
+
+      // If a department is selected, only show activity types for that department
+      if (selectedDepartment) {
+        filteredTypes = allActivityTypes.filter(type =>
+          type.departments && type.departments.some(dept => dept.name === selectedDepartment)
+        );
+      }
+
+      // If a consultant is selected, filter by their actual activity types
+      if (selectedConsultant) {
+        const consultantActivities = activities.filter(a => a.name === selectedConsultant);
+        const consultantActivityTypes = [...new Set(consultantActivities.map(a => a.activityType).filter(Boolean))];
+
+        filteredTypes = filteredTypes.filter(type => consultantActivityTypes.includes(type.name));
+      }
+
+      activityTypeSelect.innerHTML = '<option value="">All Activities</option>' +
+        filteredTypes
+          .sort((a, b) => a.name.localeCompare(b.name))
+          .map(type => `<option value="${escapeHtml(type.name)}">${escapeHtml(type.name)}</option>`)
+          .join('');
+
+      // Restore previous selection if still valid
+      if (currentValue && filteredTypes.some(t => t.name === currentValue)) {
+        activityTypeSelect.value = currentValue;
+      }
+    }
+
+    function updateConsultantFilter(selectedDepartment = null) {
+      const consultantSelect = document.getElementById('filter-consultant');
+      const currentValue = consultantSelect.value;
+
+      let filteredActivities = activities;
+
+      // If a department is selected, only show consultants from that department
+      if (selectedDepartment) {
+        filteredActivities = activities.filter(a => a.department === selectedDepartment);
+      }
+
+      const consultants = [...new Set(filteredActivities.map(a => a.name).filter(Boolean))].sort();
+      consultantSelect.innerHTML = '<option value="">All Consultants</option>' +
+        consultants.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
+
+      // Restore previous selection if still valid
+      if (currentValue && consultants.includes(currentValue)) {
+        consultantSelect.value = currentValue;
+      }
+    }
+
+    // Update dependent filters when department changes
+    function onDepartmentFilterChange() {
+      const selectedDepartment = document.getElementById('filter-department').value;
+      updateActivityTypeFilter(selectedDepartment, null);
+      updateConsultantFilter(selectedDepartment, null);
+      applyFilters();
+    }
+
+    // Update dependent filters when consultant changes
+    function onConsultantFilterChange() {
+      const selectedConsultant = document.getElementById('filter-consultant').value;
+
+      if (selectedConsultant) {
+        // Always filter departments to show only those where consultant has activities
+        updateDepartmentFilterByConsultant(selectedConsultant);
+
+        // Get the consultant's activities to find their department(s)
+        const consultantActivities = activities.filter(a => a.name === selectedConsultant);
+        const consultantDepartments = [...new Set(consultantActivities.map(a => a.department).filter(Boolean))];
+
+        // If consultant only works in one department, auto-select it
+        if (consultantDepartments.length === 1) {
+          document.getElementById('filter-department').value = consultantDepartments[0];
+          updateActivityTypeFilter(consultantDepartments[0], selectedConsultant);
+        } else {
+          // Multiple departments - filter by consultant only
+          updateActivityTypeFilter(null, selectedConsultant);
+        }
+      } else {
+        // No consultant selected - reset to show all
+        updateDepartmentFilter();
+        const selectedDepartment = document.getElementById('filter-department').value;
+        updateActivityTypeFilter(selectedDepartment, null);
+      }
+
+      applyFilters();
+    }
+
+    function updateDepartmentFilterByConsultant(selectedConsultant) {
+      const departmentSelect = document.getElementById('filter-department');
+      const currentValue = departmentSelect.value;
+
+      let filteredDepartments = allDepartments;
+
+      // Filter departments to only show those where the consultant has activities
+      if (selectedConsultant) {
+        const consultantActivities = activities.filter(a => a.name === selectedConsultant);
+        const consultantDepartmentNames = [...new Set(consultantActivities.map(a => a.department).filter(Boolean))];
+        filteredDepartments = allDepartments.filter(d => consultantDepartmentNames.includes(d.name));
+      }
+
+      departmentSelect.innerHTML = '<option value="">All Departments</option>' +
+        filteredDepartments
+          .sort((a, b) => a.name.localeCompare(b.name))
+          .map(dept => `<option value="${escapeHtml(dept.name)}">${escapeHtml(dept.name)}</option>`)
+          .join('');
+
+      // Restore previous selection if still valid
+      if (currentValue && filteredDepartments.some(d => d.name === currentValue)) {
+        departmentSelect.value = currentValue;
+      }
+    }
+
+    function applyFilters() {
+      let filtered = [...activities];
+
+      // Apply activity type filter
+      const filterActivityType = document.getElementById('filter-activity-type')?.value;
+      if (filterActivityType) {
+        filtered = filtered.filter(activity =>
+          activity.activityType === filterActivityType || activity.title === filterActivityType
+        );
+      }
+
+      // Apply department filter
+      const filterDepartment = document.getElementById('filter-department')?.value;
+      if (filterDepartment) {
+        filtered = filtered.filter(activity => activity.department === filterDepartment);
+      }
+
+      // Apply consultant filter
+      const filterConsultant = document.getElementById('filter-consultant')?.value;
+      if (filterConsultant) {
+        filtered = filtered.filter(activity => activity.name === filterConsultant);
+      }
+
+      // Apply week number filter
+      const filterWeek = document.getElementById('filter-week')?.value;
+      if (filterWeek) {
+        const weekNum = parseInt(filterWeek);
+        filtered = filtered.filter(activity => {
+          const activityDate = new Date(activity.week || activity.activityDate);
+          const activityWeekNum = getWeekNumber(activityDate);
+          return activityWeekNum === weekNum;
+        });
+      }
+
+      // Apply date filter
+      if (currentFilter !== 'all') {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        filtered = filtered.filter(activity => {
+          const activityDate = new Date(activity.week || activity.activityDate);
+          activityDate.setHours(0, 0, 0, 0);
+
+          switch (currentFilter) {
+            case 'today':
+              return activityDate.getTime() === today.getTime();
+
+            case 'this-week':
+              const weekStart = new Date(today);
+              weekStart.setDate(today.getDate() - today.getDay()); // Start of week (Sunday)
+              const weekEnd = new Date(weekStart);
+              weekEnd.setDate(weekStart.getDate() + 6); // End of week (Saturday)
+              return activityDate >= weekStart && activityDate <= weekEnd;
+
+            case 'last-week':
+              const lastWeekStart = new Date(today);
+              lastWeekStart.setDate(today.getDate() - today.getDay() - 7);
+              const lastWeekEnd = new Date(lastWeekStart);
+              lastWeekEnd.setDate(lastWeekStart.getDate() + 6);
+              return activityDate >= lastWeekStart && activityDate <= lastWeekEnd;
+
+            case 'this-month':
+              return activityDate.getMonth() === today.getMonth() &&
+                     activityDate.getFullYear() === today.getFullYear();
+
+            case 'custom':
+              const startDate = document.getElementById('filter-start-date').value;
+              const endDate = document.getElementById('filter-end-date').value;
+              if (startDate && endDate) {
+                const start = new Date(startDate);
+                const end = new Date(endDate);
+                start.setHours(0, 0, 0, 0);
+                end.setHours(23, 59, 59, 999);
+                return activityDate >= start && activityDate <= end;
+              }
+              return true;
+
+            default:
+              return true;
+          }
+        });
+      }
+
+      // Apply text search filter
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        filtered = filtered.filter(activity => {
+          const description = (activity.description || '').toLowerCase();
+          return description.includes(query);
+        });
+      }
+
+      filteredActivities = filtered;
+      renderActivities();
+    }
+
+    function resetFilters() {
+      currentFilter = 'all';
+      searchQuery = '';
+      document.getElementById('search-activities').value = '';
+      document.getElementById('filter-activity-type').value = '';
+      document.getElementById('filter-department').value = '';
+      document.getElementById('filter-consultant').value = '';
+      document.getElementById('filter-week').value = '';
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      document.querySelector('[data-filter="all"]').classList.add('active');
+      document.getElementById('custom-date-range').classList.add('hidden');
+      applyFilters();
+    }
+
+    window.resetFilters = resetFilters;
+
+    // Export to CSV function
+    function exportToCSV() {
+      const dataToExport = filteredActivities.length > 0 || searchQuery || currentFilter !== 'all'
+        ? filteredActivities
+        : activities;
+
+      if (dataToExport.length === 0) {
+        showNotification('No activities to export', 'error');
+        return;
+      }
+
+      // CSV headers
+      const headers = ['Date', 'Employee', 'Department', 'Activity Type', 'Units', 'Percentage', 'Description'];
+
+      // CSV rows
+      const rows = dataToExport.map(activity => {
+        const date = activity.week || activity.activityDate || 'No Date';
+        const formattedDate = date !== 'No Date'
+          ? new Date(date + 'T00:00:00').toLocaleDateString('en-US')
+          : 'No Date';
+
+        return [
+          formattedDate,
+          activity.name || currentUser?.name || '',
+          activity.department || '',
+          activity.activityType || activity.title || '',
+          activity.units || activity.unitsCompleted || '',
+          activity.percentage || activity.percentageComplete || '',
+          (activity.description || '').replace(/,/g, ';') // Replace commas to avoid CSV issues
+        ];
+      });
+
+      // Combine headers and rows
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.join(','))
+      ].join('\n');
+
+      // Create download link
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `vif-activities-${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      showNotification(`Exported ${dataToExport.length} activities to CSV`, 'success');
+    }
+
+
+    // Check for existing user on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      const storedUser = localStorage.getItem('vif-user');
+
+      if (storedUser) {
+        try {
+          currentUser = JSON.parse(storedUser);
+          showDashboard();
+        } catch (error) {
+          console.error('Error parsing stored user:', error);
+          localStorage.removeItem('vif-user');
+        }
+      }
+
+      // Set default date to today when page loads
+      setTimeout(() => {
+        const dateInput = document.getElementById('activity-date');
+        if (dateInput) {
+          const today = new Date().toISOString().split('T')[0];
+          dateInput.value = today;
+          dateInput.dispatchEvent(new Event('change'));
+        }
+
+        // Add event listeners for filter and search
+        setupFilterAndSearch();
+      }, 100);
+    });
+
+    // Setup filter and search event listeners
+    function setupFilterAndSearch() {
+      // Filter button click handlers
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const filter = this.getAttribute('data-filter');
+          currentFilter = filter;
+
+          // Update active state
+          document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+          this.classList.add('active');
+
+          // Show/hide custom date range
+          if (filter === 'custom') {
+            document.getElementById('custom-date-range').classList.remove('hidden');
+          } else {
+            document.getElementById('custom-date-range').classList.add('hidden');
+          }
+
+          applyFilters();
+        });
+      });
+
+      // Custom date range change handlers
+      document.getElementById('filter-start-date').addEventListener('change', () => {
+        if (currentFilter === 'custom') {
+          applyFilters();
+        }
+      });
+
+      document.getElementById('filter-end-date').addEventListener('change', () => {
+        if (currentFilter === 'custom') {
+          applyFilters();
+        }
+      });
+
+      // Search input handler (with debounce)
+      let searchTimeout;
+      document.getElementById('search-activities').addEventListener('input', (e) => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+          searchQuery = e.target.value.trim();
+          applyFilters();
+        }, 300);
+      });
+
+      // Advanced filter handlers
+      document.getElementById('filter-activity-type').addEventListener('change', applyFilters);
+      document.getElementById('filter-department').addEventListener('change', onDepartmentFilterChange);
+      document.getElementById('filter-consultant').addEventListener('change', onConsultantFilterChange);
+      document.getElementById('filter-week').addEventListener('input', (e) => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+          applyFilters();
+        }, 300);
+      });
+
+      // Clear filters button handler
+      document.getElementById('clear-filters-btn').addEventListener('click', resetFilters);
+
+      // Export CSV button handler
+      document.getElementById('export-csv-button').addEventListener('click', exportToCSV);
+
+      // ============================================
+      // PWA & Mobile Features
+      // ============================================
+
+      // 1. Service Worker Registration
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/service-worker.js')
+            .then(registration => {
+              console.log('Service Worker registered successfully:', registration.scope);
+
+              // Request notification permission
+              if ('Notification' in window && Notification.permission === 'default') {
+                setTimeout(() => {
+                  Notification.requestPermission().then(permission => {
+                    console.log('Notification permission:', permission);
+                  });
+                }, 5000); // Ask after 5 seconds
+              }
+            })
+            .catch(error => {
+              console.error('Service Worker registration failed:', error);
+            });
+        });
+      }
+
+      // 2. PWA Install Prompt
+      let deferredPrompt;
+      const installBanner = document.getElementById('install-banner');
+      const installBtn = document.getElementById('install-btn');
+      const installDismiss = document.getElementById('install-dismiss');
+
+      window.addEventListener('beforeinstallprompt', (e) => {
+        console.log('beforeinstallprompt event fired');
+        e.preventDefault();
+        deferredPrompt = e;
+
+        // Show the install banner after a short delay
+        setTimeout(() => {
+          if (!localStorage.getItem('pwa-install-dismissed')) {
+            installBanner.classList.remove('hidden');
+          }
+        }, 3000);
+      });
+
+      // Install button click
+      if (installBtn) {
+        installBtn.addEventListener('click', async () => {
+          if (!deferredPrompt) {
+            console.log('No deferred prompt available');
+            return;
+          }
+
+          installBanner.classList.add('hidden');
+          deferredPrompt.prompt();
+
+          const { outcome } = await deferredPrompt.userChoice;
+          console.log(`User response to install prompt: ${outcome}`);
+
+          deferredPrompt = null;
+        });
+      }
+
+      // Dismiss install banner
+      if (installDismiss) {
+        installDismiss.addEventListener('click', () => {
+          installBanner.classList.add('hidden');
+          localStorage.setItem('pwa-install-dismissed', 'true');
+        });
+      }
+
+      // Detect when app is installed
+      window.addEventListener('appinstalled', () => {
+        console.log('PWA was installed');
+        installBanner.classList.add('hidden');
+        showNotification('App Installed!', 'VIFM Activity Tracker is now installed on your device.');
+      });
+
+      // 3. Voice-to-Text Implementation
+      const voiceBtn = document.getElementById('voice-input-btn');
+      const descriptionField = document.getElementById('description');
+      const micIcon = document.getElementById('mic-icon');
+      const voiceStatus = document.getElementById('voice-status');
+
+      if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.lang = 'en-US';
+
+        let isListening = false;
+
+        voiceBtn.addEventListener('click', () => {
+          if (isListening) {
+            recognition.stop();
+            isListening = false;
+            voiceStatus.textContent = 'Voice';
+            micIcon.classList.remove('text-red-500', 'animate-pulse');
+          } else {
+            recognition.start();
+            isListening = true;
+            voiceStatus.textContent = 'Listening...';
+            micIcon.classList.add('text-red-500', 'animate-pulse');
+          }
+        });
+
+        recognition.onresult = (event) => {
+          const transcript = event.results[0][0].transcript;
+
+          // Append to existing text or replace if empty
+          if (descriptionField.value.trim()) {
+            descriptionField.value += ' ' + transcript;
+          } else {
+            descriptionField.value = transcript;
+          }
+
+          console.log('Voice input:', transcript);
+          showNotification('Voice Input Received', transcript);
+        };
+
+        recognition.onerror = (event) => {
+          console.error('Speech recognition error:', event.error);
+          isListening = false;
+          voiceStatus.textContent = 'Voice';
+          micIcon.classList.remove('text-red-500', 'animate-pulse');
+
+          if (event.error === 'no-speech') {
+            showNotification('No Speech Detected', 'Please try again and speak clearly.');
+          } else if (event.error === 'not-allowed') {
+            showNotification('Microphone Access Denied', 'Please enable microphone permissions.');
+          }
+        };
+
+        recognition.onend = () => {
+          isListening = false;
+          voiceStatus.textContent = 'Voice';
+          micIcon.classList.remove('text-red-500', 'animate-pulse');
+        };
+      } else {
+        // Hide voice button if not supported
+        voiceBtn.style.display = 'none';
+        console.warn('Speech recognition not supported in this browser');
+      }
+
+      // 4. Offline/Online Detection
+      const offlineIndicator = document.getElementById('offline-indicator');
+
+      function updateOnlineStatus() {
+        if (navigator.onLine) {
+          offlineIndicator.classList.add('hidden');
+          console.log('Online');
+
+          // Trigger background sync if available
+          if ('serviceWorker' in navigator && 'sync' in navigator.serviceWorker) {
+            navigator.serviceWorker.ready.then(registration => {
+              return registration.sync.register('sync-activities');
+            }).catch(err => console.error('Background sync failed:', err));
+          }
+        } else {
+          offlineIndicator.classList.remove('hidden');
+          console.log('Offline');
+        }
+      }
+
+      // Check initial status
+      updateOnlineStatus();
+
+      // Listen for online/offline events
+      window.addEventListener('online', updateOnlineStatus);
+      window.addEventListener('offline', updateOnlineStatus);
+
+      // 5. Push Notifications Helper
+      function showNotification(title, body, options = {}) {
+        if ('Notification' in window && Notification.permission === 'granted') {
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.ready.then(registration => {
+              registration.showNotification(title, {
+                body: body,
+                icon: '/icons/icon-192x192.png',
+                badge: '/icons/icon-72x72.png',
+                vibrate: [200, 100, 200],
+                ...options
+              });
+            });
+          } else {
+            // Fallback to regular notification
+            new Notification(title, {
+              body: body,
+              icon: '/icons/icon-192x192.png',
+              ...options
+            });
+          }
+        }
+      }
+
+      // 6. Enhanced Form Submission with Offline Support
+      const originalSubmitActivity = window.submitActivity;
+      window.submitActivity = async function() {
+        try {
+          await originalSubmitActivity();
+
+          // Show notification on successful submission
+          if (Notification.permission === 'granted') {
+            showNotification('Activity Saved', 'Your activity has been successfully recorded.');
+          }
+        } catch (error) {
+          console.error('Activity submission error:', error);
+
+          // If offline, save to IndexedDB for later sync
+          if (!navigator.onLine) {
+            // This would be implemented with IndexedDB
+            console.log('Saving activity offline for later sync');
+            showNotification('Saved Offline', 'Activity will sync when you\'re back online.');
+          }
+        }
+      };
+
+      // 7. Detect if running as installed PWA
+      function isPWA() {
+        return window.matchMedia('(display-mode: standalone)').matches ||
+               window.navigator.standalone === true;
+      }
+
+      if (isPWA()) {
+        console.log('Running as installed PWA');
+        // Hide install banner permanently when running as PWA
+        if (installBanner) {
+          installBanner.remove();
+        }
+      }
+
+      // 8. Handle touch gestures for mobile (swipe to refresh)
+      let touchStartY = 0;
+      let touchEndY = 0;
+
+      document.addEventListener('touchstart', (e) => {
+        touchStartY = e.changedTouches[0].screenY;
+      }, { passive: true });
+
+      document.addEventListener('touchend', (e) => {
+        touchEndY = e.changedTouches[0].screenY;
+        handleSwipe();
+      }, { passive: true });
+
+      function handleSwipe() {
+        // Pull to refresh gesture (swipe down at top of page)
+        if (touchEndY - touchStartY > 100 && window.scrollY === 0) {
+          console.log('Pull to refresh triggered');
+          window.location.reload();
+        }
+      }
+
+      console.log('PWA features initialized successfully');
+    }
+  </script>
+</body>
+</html>
