@@ -214,10 +214,10 @@ router.get('/all', async (req, res) => {
             // Then sort by name
             return a.departments.name.localeCompare(b.departments.name);
           })
-          .map(item => item.departments);
+          .map(item => ({ ...item.departments, isPrimary: item.is_primary }));
       } else {
         // Use departments directly
-        departments = departmentsResult.data || [];
+        departments = (departmentsResult.data || []).map(d => ({ ...d, isPrimary: false }));
       }
 
       return res.json({
@@ -233,7 +233,8 @@ router.get('/all', async (req, res) => {
         departments: departments.map(d => ({
           id: d.id,
           name: d.name,
-          description: d.description
+          description: d.description,
+          isPrimary: d.isPrimary || false
         }))
       });
     }

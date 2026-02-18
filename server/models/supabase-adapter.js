@@ -142,6 +142,7 @@ class SupabaseAdapter {
    */
   async toSupabaseActivity(appData) {
     const employee = await this.getEmployeeByEmail(appData.email);
+    // Activity type lookup is optional — free-text entries may not match an existing type
     const activityType = appData.activityType ? await this.getActivityTypeByName(appData.activityType) : null;
     const department = appData.department ? await this.getDepartmentByName(appData.department) : null;
 
@@ -155,7 +156,8 @@ class SupabaseAdapter {
     const supabaseData = {
       employee_id: employee?.id || null,
       employee_name: employee?.full_name || employee?.name || null,
-      activity_type_id: activityType?.id || null,
+      activity_type_id: activityType?.id || null, // null if free-text doesn't match existing type
+      activity_type_text: appData.activityType || null, // store raw free-text activity type
       department_id: department?.id || null,
       report_date: appData.week || new Date().toISOString().split('T')[0],
       description: appData.description || '',
@@ -203,7 +205,7 @@ class SupabaseAdapter {
       email: employee?.email || '',
       name: supabaseData.employee_name || employee?.full_name || employee?.name || '',
       department: department?.name || '',
-      activityType: activityType?.name || '',
+      activityType: activityType?.name || supabaseData.activity_type_text || '',
       description: supabaseData.description || '',
       hours: supabaseData.units_completed || 0,
       percentageComplete: supabaseData.percentage_complete || null,
@@ -231,14 +233,25 @@ class SupabaseAdapter {
   // ==================== UTILITY ====================
 
   /**
-   * Get ISO week number from date
+   * Get week number from date (weeks end on Friday)
    */
   getWeekNumber(date) {
     const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-    const dayNum = d.getUTCDay() || 7;
-    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+    const dayOfWeek = d.getUTCDay(); // 0=Sun .. 6=Sat
+
+    // Find this week's Friday (week-ending day)
+    const daysToFriday = dayOfWeek === 6 ? 6 : (5 - dayOfWeek);
+    const friday = new Date(d);
+    friday.setUTCDate(d.getUTCDate() + daysToFriday);
+
+    // Find the first Friday of the year
+    const yearStart = new Date(Date.UTC(friday.getUTCFullYear(), 0, 1));
+    const ysDay = yearStart.getUTCDay();
+    const daysToFirstFriday = ysDay <= 5 ? (5 - ysDay) : 6;
+    const firstFriday = new Date(yearStart);
+    firstFriday.setUTCDate(1 + daysToFirstFriday);
+
+    return Math.floor((friday - firstFriday) / (7 * 86400000)) + 1;
   }
 
   /**
