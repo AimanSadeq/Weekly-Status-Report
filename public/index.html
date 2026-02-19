@@ -25,10 +25,15 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!-- SheetJS for Excel export -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
+      darkMode: 'class',
       theme: {
         extend: {
           fontFamily: {
@@ -248,6 +253,106 @@
       color: #010131;
       border-bottom: 4px solid #5391D5;
     }
+
+    /* Skeleton loading animation */
+    .skeleton {
+      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 4px;
+    }
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* Bulk action toolbar */
+    .bulk-toolbar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(135deg, #121140 0%, #010131 100%);
+      color: white;
+      padding: 12px 24px;
+      z-index: 100;
+      display: none;
+      box-shadow: 0 -4px 12px rgba(0,0,0,0.3);
+    }
+    .bulk-toolbar.active { display: flex; align-items: center; justify-content: space-between; }
+
+    /* Undo toast */
+    .undo-toast {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1f2937;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    /* Dark mode overrides */
+    .dark body, .dark .bg-gray-50 { background: #1a1a2e !important; }
+    .dark .vif-box { background: #16213e !important; border-color: #0f3460 !important; color: #e0e0e0; }
+    .dark .header-banner { background: #0f3460 !important; border-color: #5391D5 !important; }
+    .dark .bg-white { background: #16213e !important; }
+    .dark .text-gray-900 { color: #e0e0e0 !important; }
+    .dark .text-gray-600, .dark .text-gray-700 { color: #a0a0b0 !important; }
+    .dark .border-gray-200, .dark .border-gray-300 { border-color: #2a2a4a !important; }
+    .dark input, .dark select, .dark textarea { background: #1a1a2e !important; color: #e0e0e0 !important; border-color: #3a3a5a !important; }
+    .dark .stat-box { background: linear-gradient(135deg, #0f3460 0%, #16213e 100%) !important; }
+    .dark .activity-item { background: #1a1a2e !important; border-left-color: #5391D5 !important; }
+    .dark .activity-item:hover { background: #16213e !important; }
+    .dark .bg-gradient-to-r { background: #16213e !important; }
+    .dark .bg-indigo-50, .dark .bg-green-50, .dark .bg-purple-50 { background: #1a1a2e !important; }
+    .dark .notification.success { background: #065f46; }
+    .dark .notification.error { background: #991b1b; }
+
+    /* Notification bell */
+    .notif-badge {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      background: #ef4444;
+      color: white;
+      font-size: 10px;
+      font-weight: 700;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .notif-dropdown {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      width: 320px;
+      max-height: 400px;
+      overflow-y: auto;
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+      z-index: 200;
+      display: none;
+    }
+    .notif-dropdown.active { display: block; }
+    .dark .notif-dropdown { background: #16213e; border-color: #2a2a4a; }
+
+    /* Password complexity indicator */
+    .pw-strength { height: 4px; border-radius: 2px; transition: all 0.3s; }
+    .pw-strength.weak { background: #ef4444; width: 33%; }
+    .pw-strength.medium { background: #f59e0b; width: 66%; }
+    .pw-strength.strong { background: #10b981; width: 100%; }
   </style>
 </head>
 <body class="bg-gray-50">
@@ -329,13 +434,41 @@
               <span id="user-role" class="capitalize bg-indigo-100 text-indigo-900 px-2 py-0.5 rounded-full"></span>
             </div>
           </div>
-          <div class="flex gap-2">
+          <div class="flex gap-2 items-center">
+            <!-- Activity counter badge -->
+            <span id="weekly-activity-badge" class="hidden px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-xs font-bold"></span>
+            <!-- Notification bell -->
+            <div class="relative" id="notif-container">
+              <button id="notif-bell" class="relative p-2 text-indigo-700 hover:text-indigo-900 transition" title="Notifications">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                </svg>
+                <span id="notif-badge" class="notif-badge hidden">0</span>
+              </button>
+              <div id="notif-dropdown" class="notif-dropdown">
+                <div class="p-3 border-b border-gray-200 flex justify-between items-center">
+                  <span class="font-bold text-sm text-gray-900">Notifications</span>
+                  <button id="mark-all-read" class="text-xs text-indigo-600 hover:text-indigo-800 font-semibold">Mark all read</button>
+                </div>
+                <div id="notif-list" class="divide-y divide-gray-100"></div>
+                <div id="notif-empty" class="p-4 text-center text-gray-500 text-sm">No notifications</div>
+              </div>
+            </div>
+            <!-- Dark mode toggle -->
+            <button id="dark-mode-toggle" class="p-2 text-indigo-700 hover:text-indigo-900 transition" title="Toggle Dark Mode">
+              <svg id="dark-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+              </svg>
+              <svg id="light-icon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+              </svg>
+            </button>
             <a
               id="admin-link"
               href="/admin-management.html"
               class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all font-bold shadow-md hover:shadow-lg transform hover:-translate-y-0.5 hidden"
             >
-              ⚙️ Admin
+              Admin
             </a>
             <button
               id="change-password-button"
@@ -384,13 +517,62 @@
         </div>
       </div>
 
+      <!-- Dashboard Summary -->
+      <div id="dashboard-summary" class="vif-box mb-4">
+        <div class="vif-header flex items-center justify-between">
+          <h2 class="text-xl font-bold text-gray-900">Dashboard Summary</h2>
+          <div class="flex gap-2 items-center">
+            <select id="summary-period" class="px-3 py-1 border border-gray-300 rounded-lg text-sm">
+              <option value="this-week">This Week</option>
+              <option value="this-month" selected>This Month</option>
+              <option value="last-month">Last Month</option>
+            </select>
+            <button id="toggle-summary" class="text-gray-400 hover:text-gray-600 text-sm font-bold">▼</button>
+          </div>
+        </div>
+        <div id="dashboard-summary-body">
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+            <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-3 rounded-lg text-center">
+              <div class="text-blue-600 text-xs font-medium">Total Activities</div>
+              <div id="sum-total" class="text-2xl font-bold text-blue-900">-</div>
+            </div>
+            <div class="bg-gradient-to-br from-green-50 to-green-100 p-3 rounded-lg text-center">
+              <div class="text-green-600 text-xs font-medium">Total Units</div>
+              <div id="sum-units" class="text-2xl font-bold text-green-900">-</div>
+            </div>
+            <div class="bg-gradient-to-br from-purple-50 to-purple-100 p-3 rounded-lg text-center">
+              <div class="text-purple-600 text-xs font-medium">Departments</div>
+              <div id="sum-depts" class="text-2xl font-bold text-purple-900">-</div>
+            </div>
+            <div class="bg-gradient-to-br from-orange-50 to-orange-100 p-3 rounded-lg text-center">
+              <div class="text-orange-600 text-xs font-medium">Activity Types</div>
+              <div id="sum-types" class="text-2xl font-bold text-orange-900">-</div>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div style="max-height:220px;"><canvas id="summary-type-chart"></canvas></div>
+            <div style="max-height:220px;"><canvas id="summary-trend-chart"></canvas></div>
+          </div>
+        </div>
+      </div>
+
       <!-- Add Activity Form -->
       <div class="vif-box mb-4">
-        <div class="vif-header">
-          <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">
-            ➕ Add Activities for Date
-          </h2>
-          <p class="text-xs text-gray-600 mt-0.5">Select a date first, then add multiple activities for that date</p>
+        <div class="vif-header flex items-center justify-between">
+          <div>
+            <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">
+              ➕ Add Activities for Date
+            </h2>
+            <p class="text-xs text-gray-600 mt-0.5">Select a date first, then add multiple activities for that date</p>
+          </div>
+          <!-- Template selector -->
+          <div class="flex gap-2 items-center">
+            <select id="template-select" class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm">
+              <option value="">Use Template...</option>
+            </select>
+            <button type="button" id="use-template-btn" class="px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-xs font-medium">Use</button>
+            <button type="button" id="manage-templates-btn" class="px-3 py-1.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-xs font-medium">Manage</button>
+          </div>
         </div>
 
         <!-- Add Activity Form -->
@@ -484,6 +666,10 @@
           </div>
 
           <div class="flex justify-end gap-2">
+            <button type="button" id="save-template-btn"
+              class="px-4 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium text-sm">
+              Save as Template
+            </button>
             <button
               type="submit"
               class="px-4 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium flex items-center text-sm"
@@ -505,15 +691,16 @@
               </h2>
               <p class="text-xs text-gray-600 mt-0.5">Track all your submitted activities</p>
             </div>
-            <button
-              id="export-csv-button"
-              class="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center gap-2 text-sm"
-            >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-              </svg>
-              Export to CSV
-            </button>
+            <div class="flex gap-2 flex-wrap">
+              <a href="/calendar.html" class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium text-sm">Calendar</a>
+              <a href="/reports.html" class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium text-sm">Reports</a>
+              <button id="export-csv-button" class="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center gap-2 text-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                Export
+              </button>
+            </div>
           </div>
         </div>
 
@@ -608,6 +795,17 @@
           </div>
         </div>
       </div>
+
+      <!-- Bulk Action Toolbar (fixed bottom) -->
+      <div id="bulk-toolbar" class="bulk-toolbar">
+        <div class="flex items-center gap-3">
+          <span id="bulk-count" class="font-bold text-sm">0 selected</span>
+          <button id="bulk-deselect" class="px-3 py-1 bg-gray-600 text-white rounded text-xs font-medium hover:bg-gray-500">Deselect All</button>
+        </div>
+        <div class="flex gap-2">
+          <button id="bulk-delete-btn" class="px-4 py-1.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-500">Delete Selected</button>
+        </div>
+      </div>
     </main>
   </div>
 
@@ -630,6 +828,15 @@
           <input id="new-password" type="password" required minlength="8"
             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-sm"
             placeholder="At least 8 characters" />
+          <div class="mt-1">
+            <div class="bg-gray-200 rounded-full h-1"><div id="pw-strength-bar" class="pw-strength weak"></div></div>
+            <div id="pw-requirements" class="mt-1 text-xs text-gray-500 space-y-0.5">
+              <div id="pw-len" class="text-red-500">At least 8 characters</div>
+              <div id="pw-upper" class="text-red-500">One uppercase letter</div>
+              <div id="pw-num" class="text-red-500">One number</div>
+              <div id="pw-special" class="text-red-500">One special character</div>
+            </div>
+          </div>
         </div>
         <div>
           <label for="confirm-password" class="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
@@ -644,6 +851,82 @@
           <div id="change-pw-spinner" class="hidden inline-block ml-2 spinner" style="width: 16px; height: 16px; border-width: 2px; vertical-align: middle;"></div>
         </button>
       </form>
+    </div>
+  </div>
+
+  <!-- Export Modal -->
+  <div id="export-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center px-4">
+    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-bold text-gray-900">Export Activities</h3>
+        <button onclick="document.getElementById('export-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+      </div>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Format</label>
+          <div class="flex gap-2">
+            <label class="flex items-center gap-2 px-3 py-2 border-2 border-indigo-200 rounded-lg cursor-pointer hover:bg-indigo-50">
+              <input type="radio" name="export-format" value="csv" checked /> CSV
+            </label>
+            <label class="flex items-center gap-2 px-3 py-2 border-2 border-indigo-200 rounded-lg cursor-pointer hover:bg-indigo-50">
+              <input type="radio" name="export-format" value="xlsx" /> Excel (XLSX)
+            </label>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">From Date</label>
+            <input type="date" id="export-start" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">To Date</label>
+            <input type="date" id="export-end" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+          </div>
+        </div>
+        <label class="flex items-center gap-2 text-sm">
+          <input type="checkbox" id="export-use-filters" checked /> Use current filters
+        </label>
+        <button id="export-go-btn" class="w-full py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm">Download</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Template Management Modal -->
+  <div id="template-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center px-4">
+    <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 max-h-[80vh] overflow-y-auto">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-bold text-gray-900">Manage Templates</h3>
+        <button onclick="document.getElementById('template-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+      </div>
+      <div id="template-list" class="space-y-2">
+        <p class="text-gray-500 text-sm">Loading templates...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bulk Delete Confirmation Modal -->
+  <div id="bulk-confirm-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center px-4">
+    <div class="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6">
+      <h3 class="text-lg font-bold text-gray-900 mb-2">Confirm Bulk Delete</h3>
+      <p id="bulk-confirm-msg" class="text-sm text-gray-600 mb-4">Are you sure you want to delete 0 activities?</p>
+      <div class="flex gap-2 justify-end">
+        <button onclick="document.getElementById('bulk-confirm-modal').classList.add('hidden')" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium">Cancel</button>
+        <button id="bulk-confirm-yes" class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-500">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Keyboard Shortcuts Help -->
+  <div id="shortcuts-help" class="hidden fixed bottom-4 right-4 bg-white rounded-lg shadow-xl border border-gray-200 p-4 z-50" style="min-width:200px;">
+    <div class="flex justify-between items-center mb-2">
+      <span class="font-bold text-sm text-gray-900">Keyboard Shortcuts</span>
+      <button onclick="document.getElementById('shortcuts-help').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">&times;</button>
+    </div>
+    <div class="text-xs text-gray-600 space-y-1">
+      <div><kbd class="px-1 py-0.5 bg-gray-100 rounded border text-xs">Ctrl+N</kbd> Focus activity form</div>
+      <div><kbd class="px-1 py-0.5 bg-gray-100 rounded border text-xs">Ctrl+F</kbd> Focus search</div>
+      <div><kbd class="px-1 py-0.5 bg-gray-100 rounded border text-xs">Esc</kbd> Close modals</div>
+      <div><kbd class="px-1 py-0.5 bg-gray-100 rounded border text-xs">?</kbd> Toggle this help</div>
     </div>
   </div>
 
@@ -924,17 +1207,17 @@
 
         const activitiesHtml = dateActivities.map(activity => {
         const statusColors = {
+          'draft': 'bg-gray-100 text-gray-700 border-gray-300',
           'pending': 'bg-yellow-100 text-yellow-800 border-yellow-300',
+          'submitted': 'bg-blue-100 text-blue-800 border-blue-300',
+          'approved': 'bg-green-100 text-green-800 border-green-300',
+          'reviewed': 'bg-green-100 text-green-800 border-green-300',
+          'needs_revision': 'bg-orange-100 text-orange-800 border-orange-300',
           'in-progress': 'bg-blue-100 text-blue-800 border-blue-300',
           'completed': 'bg-green-100 text-green-800 border-green-300'
         };
-        const statusColor = statusColors[activity.status] || statusColors['pending'];
-        const statusIcons = {
-          'pending': '⏳',
-          'in-progress': '🔄',
-          'completed': '✅'
-        };
-        const statusIcon = statusIcons[activity.status] || '⏳';
+        const statusColor = statusColors[activity.status] || statusColors['draft'];
+        const statusLabel = (activity.status || 'draft').replace(/_/g, ' ');
 
         const units = activity.units || activity.unitsCompleted;
         const hasUnits = units && !isNaN(Number(units)) && Number(units) > 0;
@@ -943,15 +1226,16 @@
         const desktopView = `
           <div class="activity-item bg-white border-b border-gray-200 hover:bg-gray-50 transition-colors desktop-view">
             <div class="flex items-center gap-3 px-3 py-2 text-sm">
+              <input type="checkbox" class="bulk-check" data-id="${escapeHtml(activity.id)}" />
               <span class="text-gray-600 w-24">${date !== 'No Date' ? new Date(date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'No Date'}</span>
-              <span class="text-gray-600 w-32">${escapeHtml(activity.name || currentUser?.name || '')}</span>
-              <span class="text-gray-600 w-32">${escapeHtml(activity.department)}</span>
+              <span class="text-gray-600 w-28">${escapeHtml(activity.name || currentUser?.name || '')}</span>
+              <span class="text-gray-600 w-28">${escapeHtml(activity.department)}</span>
               <span class="font-semibold text-gray-900 flex-1">${escapeHtml(activity.title || activity.activityType)}</span>
-              ${hasUnits ? `<span class="text-blue-700 font-semibold w-20">${escapeHtml(String(units))} units</span>` : '<span class="w-20"></span>'}
-              ${activity.description ? `<span class="text-gray-600 truncate flex-1" title="${escapeHtml(activity.description)}">${escapeHtml(activity.description)}</span>` : '<span class="flex-1"></span>'}
-              <div class="flex gap-2 w-32">
+              ${hasUnits ? `<span class="text-blue-700 font-semibold w-16">${escapeHtml(String(units))}</span>` : '<span class="w-16"></span>'}
+              <span class="px-2 py-0.5 rounded-full text-xs font-semibold border capitalize ${statusColor}">${statusLabel}</span>
+              <div class="flex gap-1 w-24">
                 <button data-action="edit" data-activity-id="${escapeHtml(activity.id)}" class="edit-btn text-indigo-600 hover:text-indigo-800 font-semibold px-2 py-1 rounded hover:bg-indigo-50 transition-colors text-xs">Edit</button>
-                <button data-action="delete" data-activity-id="${escapeHtml(activity.id)}" class="delete-btn text-red-600 hover:text-red-800 font-semibold px-2 py-1 rounded hover:bg-red-50 transition-colors text-xs">Delete</button>
+                <button data-action="delete" data-activity-id="${escapeHtml(activity.id)}" class="delete-btn text-red-600 hover:text-red-800 font-semibold px-2 py-1 rounded hover:bg-red-50 transition-colors text-xs">Del</button>
               </div>
             </div>
           </div>
@@ -961,6 +1245,10 @@
         const mobileView = `
           <div class="activity-item bg-white border-b border-gray-200 mobile-view" style="display: none;">
             <div class="mobile-card">
+              <div class="flex items-center gap-2 mb-2">
+                <input type="checkbox" class="bulk-check" data-id="${escapeHtml(activity.id)}" />
+                <span class="px-2 py-0.5 rounded-full text-xs font-semibold border capitalize ${statusColor}">${statusLabel}</span>
+              </div>
               <div class="mobile-card-row border-b border-gray-100">
                 <span class="mobile-card-label">Date</span>
                 <span class="mobile-card-value font-semibold">${date !== 'No Date' ? new Date(date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'No Date'}</span>
@@ -980,7 +1268,7 @@
               ${hasUnits ? `
               <div class="mobile-card-row border-b border-gray-100">
                 <span class="mobile-card-label">Units</span>
-                <span class="mobile-card-value text-blue-700 font-semibold">${escapeHtml(String(units))} units</span>
+                <span class="mobile-card-value text-blue-700 font-semibold">${escapeHtml(String(units))}</span>
               </div>` : ''}
               ${activity.description ? `
               <div class="mobile-card-row border-b border-gray-100">
@@ -1004,13 +1292,14 @@
       const headerHtml = `
         <div class="bg-gray-100 border-b-2 border-gray-300 desktop-view">
           <div class="flex items-center gap-3 px-3 py-2 text-xs font-bold text-gray-700 uppercase">
+            <input type="checkbox" id="select-all-check" title="Select All" />
             <span class="w-24">Date</span>
-            <span class="w-32">Employee</span>
-            <span class="w-32">Department</span>
+            <span class="w-28">Employee</span>
+            <span class="w-28">Department</span>
             <span class="flex-1">Activity</span>
-            <span class="w-20">Units</span>
-            <span class="flex-1">Description</span>
-            <span class="w-32">Actions</span>
+            <span class="w-16">Units</span>
+            <span class="w-24">Status</span>
+            <span class="w-24">Actions</span>
           </div>
         </div>
       `;
@@ -2183,6 +2472,520 @@
 
       console.log('PWA features initialized successfully');
     }
+
+    // ============================================
+    // NEW FEATURES: Dashboard Summary, Templates,
+    // Bulk Ops, Export, Notifications, Dark Mode,
+    // Keyboard Shortcuts, Password Complexity
+    // ============================================
+
+    // --- Dashboard Summary ---
+    let summaryTypeChart = null;
+    let summaryTrendChart = null;
+
+    async function loadDashboardSummary() {
+      try {
+        const period = document.getElementById('summary-period')?.value || 'this-month';
+        const now = new Date();
+        let startDate, endDate;
+        if (period === 'this-week') {
+          const day = now.getDay();
+          startDate = new Date(now); startDate.setDate(now.getDate() - day);
+          endDate = new Date(now);
+        } else if (period === 'this-month') {
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          endDate = new Date(now);
+        } else {
+          startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+          endDate = new Date(now.getFullYear(), now.getMonth(), 0);
+        }
+        const sd = startDate.toISOString().split('T')[0];
+        const ed = endDate.toISOString().split('T')[0];
+
+        const response = await authFetch(`/api/analytics/employee-summary?startDate=${sd}&endDate=${ed}`);
+        const data = await response.json();
+        if (!data.success) return;
+
+        const s = data.summary || {};
+        document.getElementById('sum-total').textContent = s.totalActivities || 0;
+        document.getElementById('sum-units').textContent = s.totalUnits || 0;
+        document.getElementById('sum-depts').textContent = Object.keys(s.byDepartment || {}).length;
+        document.getElementById('sum-types').textContent = Object.keys(s.byType || {}).length;
+
+        // Activity Type doughnut chart
+        const typeData = s.byType || {};
+        const typeLabels = Object.keys(typeData);
+        const typeValues = typeLabels.map(k => typeData[k]?.count || 0);
+        if (summaryTypeChart) summaryTypeChart.destroy();
+        const ctx1 = document.getElementById('summary-type-chart');
+        if (ctx1 && typeLabels.length > 0) {
+          summaryTypeChart = new Chart(ctx1.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+              labels: typeLabels,
+              datasets: [{ data: typeValues, backgroundColor: ['#356daa','#5391D5','#84aed9','#b3cce8','#10b981','#f59e0b','#ef4444','#8b5cf6'] }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { font: { size: 10 } } } } }
+          });
+        }
+
+        // Weekly trend line chart
+        const trendData = s.weeklyTrend || [];
+        if (summaryTrendChart) summaryTrendChart.destroy();
+        const ctx2 = document.getElementById('summary-trend-chart');
+        if (ctx2 && trendData.length > 0) {
+          summaryTrendChart = new Chart(ctx2.getContext('2d'), {
+            type: 'line',
+            data: {
+              labels: trendData.map(t => t.week || t.date || ''),
+              datasets: [{ label: 'Activities', data: trendData.map(t => t.count || 0), borderColor: '#5391D5', backgroundColor: 'rgba(83,145,213,0.1)', fill: true, tension: 0.3 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+          });
+        }
+      } catch (e) {
+        console.error('Dashboard summary error:', e);
+      }
+    }
+
+    // Toggle summary
+    document.getElementById('toggle-summary')?.addEventListener('click', () => {
+      const body = document.getElementById('dashboard-summary-body');
+      const btn = document.getElementById('toggle-summary');
+      body.classList.toggle('hidden');
+      btn.textContent = body.classList.contains('hidden') ? '▶' : '▼';
+    });
+    document.getElementById('summary-period')?.addEventListener('change', loadDashboardSummary);
+
+    // --- Notification Bell ---
+    let notifPollingInterval = null;
+
+    async function loadNotifications() {
+      try {
+        const response = await authFetch('/api/notifications?unreadOnly=false&limit=20');
+        const data = await response.json();
+        if (!data.success) return;
+
+        const notifications = data.notifications || [];
+        const unreadCount = data.unreadCount || 0;
+        const badge = document.getElementById('notif-badge');
+        const list = document.getElementById('notif-list');
+        const empty = document.getElementById('notif-empty');
+
+        if (unreadCount > 0) {
+          badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+          badge.classList.remove('hidden');
+        } else {
+          badge.classList.add('hidden');
+        }
+
+        if (notifications.length === 0) {
+          list.innerHTML = '';
+          empty.classList.remove('hidden');
+        } else {
+          empty.classList.add('hidden');
+          list.innerHTML = notifications.map(n => `
+            <div class="p-3 hover:bg-gray-50 cursor-pointer ${n.is_read ? 'opacity-60' : ''}" data-notif-id="${escapeHtml(n.id)}">
+              <div class="text-sm font-semibold text-gray-900">${escapeHtml(n.title || '')}</div>
+              <div class="text-xs text-gray-600 mt-0.5">${escapeHtml(n.message || '')}</div>
+              <div class="text-xs text-gray-400 mt-1">${n.created_at ? new Date(n.created_at).toLocaleString() : ''}</div>
+            </div>
+          `).join('');
+
+          list.querySelectorAll('[data-notif-id]').forEach(el => {
+            el.addEventListener('click', async () => {
+              const id = el.getAttribute('data-notif-id');
+              await authFetch(`/api/notifications/${id}/read`, { method: 'PUT' });
+              el.classList.add('opacity-60');
+              loadNotifications();
+            });
+          });
+        }
+      } catch (e) {
+        console.error('Notification load error:', e);
+      }
+    }
+
+    document.getElementById('notif-bell')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.getElementById('notif-dropdown').classList.toggle('active');
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!document.getElementById('notif-container')?.contains(e.target)) {
+        document.getElementById('notif-dropdown')?.classList.remove('active');
+      }
+    });
+
+    document.getElementById('mark-all-read')?.addEventListener('click', async () => {
+      await authFetch('/api/notifications/mark-all-read', { method: 'PUT' });
+      loadNotifications();
+    });
+
+    function startNotifPolling() {
+      loadNotifications();
+      notifPollingInterval = setInterval(loadNotifications, 60000);
+    }
+
+    // --- Dark Mode ---
+    function initDarkMode() {
+      const saved = localStorage.getItem('vif-dark-mode');
+      if (saved === 'true') {
+        document.documentElement.classList.add('dark');
+        document.getElementById('dark-icon')?.classList.add('hidden');
+        document.getElementById('light-icon')?.classList.remove('hidden');
+      }
+    }
+
+    document.getElementById('dark-mode-toggle')?.addEventListener('click', () => {
+      const isDark = document.documentElement.classList.toggle('dark');
+      localStorage.setItem('vif-dark-mode', isDark);
+      document.getElementById('dark-icon')?.classList.toggle('hidden', isDark);
+      document.getElementById('light-icon')?.classList.toggle('hidden', !isDark);
+    });
+
+    initDarkMode();
+
+    // --- Weekly Activity Counter Badge ---
+    function updateWeeklyBadge() {
+      const now = new Date();
+      const day = now.getDay();
+      const weekStart = new Date(now); weekStart.setDate(now.getDate() - day); weekStart.setHours(0,0,0,0);
+      const count = activities.filter(a => {
+        const d = new Date((a.week || a.activityDate) + 'T00:00:00');
+        return d >= weekStart;
+      }).length;
+      const badge = document.getElementById('weekly-activity-badge');
+      if (badge) {
+        badge.textContent = `${count} this week`;
+        badge.classList.remove('hidden');
+      }
+    }
+
+    // --- Templates ---
+    let templates = [];
+
+    async function loadTemplates() {
+      try {
+        const response = await authFetch('/api/templates');
+        const data = await response.json();
+        if (data.success) {
+          templates = data.templates || [];
+          populateTemplateDropdown();
+        }
+      } catch (e) { console.error('Template load error:', e); }
+    }
+
+    function populateTemplateDropdown() {
+      const sel = document.getElementById('template-select');
+      if (!sel) return;
+      sel.innerHTML = '<option value="">Use Template...</option>' +
+        templates.map(t => `<option value="${escapeHtml(t.id)}">${escapeHtml(t.name)}</option>`).join('');
+    }
+
+    document.getElementById('use-template-btn')?.addEventListener('click', () => {
+      const sel = document.getElementById('template-select');
+      const tpl = templates.find(t => t.id === sel?.value);
+      if (!tpl) return showNotification('Select a template first', 'error');
+      if (tpl.department_name) document.getElementById('department').value = tpl.department_name;
+      if (tpl.activity_type_text) document.getElementById('activity-type').value = tpl.activity_type_text;
+      if (tpl.description) document.getElementById('description').value = tpl.description;
+      if (tpl.units_completed) document.getElementById('units').value = tpl.units_completed;
+      showNotification('Template applied!');
+      // Record usage
+      authFetch(`/api/templates/${tpl.id}/use`, { method: 'POST' }).catch(() => {});
+    });
+
+    document.getElementById('save-template-btn')?.addEventListener('click', async () => {
+      const name = prompt('Template name:');
+      if (!name) return;
+      try {
+        const response = await authFetch('/api/templates', {
+          method: 'POST',
+          body: JSON.stringify({
+            name,
+            departmentName: document.getElementById('department').value,
+            activityTypeText: document.getElementById('activity-type').value,
+            description: document.getElementById('description').value,
+            unitsCompleted: parseInt(document.getElementById('units').value) || null,
+            isShared: false
+          })
+        });
+        const data = await response.json();
+        if (data.success) {
+          showNotification('Template saved!');
+          loadTemplates();
+        } else {
+          showNotification(data.error || 'Failed to save template', 'error');
+        }
+      } catch (e) { showNotification('Failed to save template', 'error'); }
+    });
+
+    document.getElementById('manage-templates-btn')?.addEventListener('click', async () => {
+      document.getElementById('template-modal').classList.remove('hidden');
+      await loadTemplates();
+      renderTemplateList();
+    });
+
+    function renderTemplateList() {
+      const container = document.getElementById('template-list');
+      if (templates.length === 0) {
+        container.innerHTML = '<p class="text-gray-500 text-sm">No templates yet. Save one from the activity form!</p>';
+        return;
+      }
+      container.innerHTML = templates.map(t => `
+        <div class="p-3 border border-gray-200 rounded-lg flex justify-between items-center">
+          <div>
+            <div class="font-semibold text-sm text-gray-900">${escapeHtml(t.name)}</div>
+            <div class="text-xs text-gray-500">${escapeHtml(t.department_name || '')} • ${escapeHtml(t.activity_type_text || '')}${t.usage_count ? ` • Used ${t.usage_count}x` : ''}</div>
+          </div>
+          <button class="text-red-500 hover:text-red-700 text-sm font-bold" onclick="deleteTemplate('${escapeHtml(t.id)}')">Delete</button>
+        </div>
+      `).join('');
+    }
+
+    window.deleteTemplate = async function(id) {
+      try {
+        await authFetch(`/api/templates/${id}`, { method: 'DELETE' });
+        showNotification('Template deleted');
+        await loadTemplates();
+        renderTemplateList();
+      } catch (e) { showNotification('Failed to delete template', 'error'); }
+    };
+
+    // --- Bulk Operations ---
+    let selectedIds = new Set();
+
+    function updateBulkToolbar() {
+      const toolbar = document.getElementById('bulk-toolbar');
+      if (selectedIds.size > 0) {
+        toolbar.classList.add('active');
+        document.getElementById('bulk-count').textContent = `${selectedIds.size} selected`;
+      } else {
+        toolbar.classList.remove('active');
+      }
+    }
+
+    document.addEventListener('change', (e) => {
+      if (e.target.id === 'select-all-check') {
+        const checked = e.target.checked;
+        document.querySelectorAll('.bulk-check').forEach(cb => {
+          cb.checked = checked;
+          const id = cb.getAttribute('data-id');
+          if (checked) selectedIds.add(id); else selectedIds.delete(id);
+        });
+        updateBulkToolbar();
+      } else if (e.target.classList.contains('bulk-check')) {
+        const id = e.target.getAttribute('data-id');
+        if (e.target.checked) selectedIds.add(id); else selectedIds.delete(id);
+        updateBulkToolbar();
+      }
+    });
+
+    document.getElementById('bulk-deselect')?.addEventListener('click', () => {
+      selectedIds.clear();
+      document.querySelectorAll('.bulk-check').forEach(cb => cb.checked = false);
+      const selectAll = document.getElementById('select-all-check');
+      if (selectAll) selectAll.checked = false;
+      updateBulkToolbar();
+    });
+
+    document.getElementById('bulk-delete-btn')?.addEventListener('click', () => {
+      if (selectedIds.size === 0) return;
+      document.getElementById('bulk-confirm-msg').textContent = `Are you sure you want to delete ${selectedIds.size} activities?`;
+      document.getElementById('bulk-confirm-modal').classList.remove('hidden');
+    });
+
+    document.getElementById('bulk-confirm-yes')?.addEventListener('click', async () => {
+      document.getElementById('bulk-confirm-modal').classList.add('hidden');
+      try {
+        const response = await authFetch('/api/activities/bulk-delete', {
+          method: 'POST',
+          body: JSON.stringify({ activityIds: Array.from(selectedIds) })
+        });
+        const data = await response.json();
+        if (data.success) {
+          const count = selectedIds.size;
+          const deletedIds = Array.from(selectedIds);
+          selectedIds.clear();
+          updateBulkToolbar();
+          showNotification(`${count} activities deleted`);
+          // Show undo toast
+          showUndoToast(deletedIds);
+          await fetchActivities();
+        } else {
+          showNotification(data.error || 'Bulk delete failed', 'error');
+        }
+      } catch (e) { showNotification('Bulk delete failed', 'error'); }
+    });
+
+    // --- Undo Delete Toast ---
+    function showUndoToast(activityIds) {
+      const existing = document.querySelector('.undo-toast');
+      if (existing) existing.remove();
+      const toast = document.createElement('div');
+      toast.className = 'undo-toast';
+      toast.innerHTML = `
+        <span>${activityIds.length} activities deleted</span>
+        <button id="undo-delete-btn" class="px-3 py-1 bg-indigo-500 text-white rounded text-sm font-bold hover:bg-indigo-400">Undo</button>
+      `;
+      document.body.appendChild(toast);
+
+      const undoBtn = document.getElementById('undo-delete-btn');
+      undoBtn.addEventListener('click', async () => {
+        try {
+          for (const id of activityIds) {
+            await authFetch(`/api/activities/${id}/restore`, { method: 'POST' });
+          }
+          showNotification(`${activityIds.length} activities restored`);
+          toast.remove();
+          await fetchActivities();
+        } catch (e) { showNotification('Restore failed', 'error'); }
+      });
+
+      setTimeout(() => toast.remove(), 5000);
+    }
+
+    // --- Export Modal ---
+    document.getElementById('export-csv-button')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.getElementById('export-modal').classList.remove('hidden');
+    });
+
+    // Remove old direct exportToCSV listener and use modal
+    document.getElementById('export-go-btn')?.addEventListener('click', () => {
+      const format = document.querySelector('input[name="export-format"]:checked')?.value || 'csv';
+      const useFilters = document.getElementById('export-use-filters')?.checked;
+      const startDate = document.getElementById('export-start')?.value;
+      const endDate = document.getElementById('export-end')?.value;
+
+      let dataToExport = useFilters
+        ? (filteredActivities.length > 0 || isAnyFilterActive() ? filteredActivities : activities)
+        : activities;
+
+      // Apply date range if specified
+      if (startDate) {
+        dataToExport = dataToExport.filter(a => (a.week || a.activityDate || '') >= startDate);
+      }
+      if (endDate) {
+        dataToExport = dataToExport.filter(a => (a.week || a.activityDate || '') <= endDate);
+      }
+
+      if (dataToExport.length === 0) {
+        return showNotification('No activities to export', 'error');
+      }
+
+      if (format === 'xlsx' && typeof XLSX !== 'undefined') {
+        // Excel export
+        const rows = dataToExport.map(a => ({
+          Date: (a.week || a.activityDate || '').split('T')[0],
+          Employee: a.name || currentUser?.name || '',
+          Department: a.department || '',
+          'Activity Type': a.activityType || a.title || '',
+          Units: a.units || a.unitsCompleted || 0,
+          Status: a.status || 'draft',
+          Description: a.description || ''
+        }));
+        const ws = XLSX.utils.json_to_sheet(rows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Activities');
+        XLSX.writeFile(wb, `vif-activities-${new Date().toISOString().split('T')[0]}.xlsx`);
+        showNotification(`Exported ${dataToExport.length} activities to Excel`);
+      } else {
+        // CSV export
+        const headers = ['Date','Employee','Department','Activity Type','Units','Status','Description'];
+        const rows = dataToExport.map(a => [
+          (a.week || a.activityDate || '').split('T')[0],
+          a.name || currentUser?.name || '',
+          a.department || '',
+          a.activityType || a.title || '',
+          a.units || a.unitsCompleted || '',
+          a.status || 'draft',
+          (a.description || '').replace(/,/g, ';')
+        ]);
+        const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `vif-activities-${new Date().toISOString().split('T')[0]}.csv`;
+        link.click();
+        showNotification(`Exported ${dataToExport.length} activities to CSV`);
+      }
+
+      document.getElementById('export-modal').classList.add('hidden');
+    });
+
+    // --- Password Complexity Display ---
+    document.getElementById('new-password')?.addEventListener('input', (e) => {
+      const pw = e.target.value;
+      const hasLen = pw.length >= 8;
+      const hasUpper = /[A-Z]/.test(pw);
+      const hasNum = /[0-9]/.test(pw);
+      const hasSpecial = /[^A-Za-z0-9]/.test(pw);
+      const score = [hasLen, hasUpper, hasNum, hasSpecial].filter(Boolean).length;
+
+      document.getElementById('pw-len').className = hasLen ? 'text-green-600' : 'text-red-500';
+      document.getElementById('pw-upper').className = hasUpper ? 'text-green-600' : 'text-red-500';
+      document.getElementById('pw-num').className = hasNum ? 'text-green-600' : 'text-red-500';
+      document.getElementById('pw-special').className = hasSpecial ? 'text-green-600' : 'text-red-500';
+
+      const bar = document.getElementById('pw-strength-bar');
+      if (score <= 1) { bar.className = 'pw-strength weak'; }
+      else if (score <= 3) { bar.className = 'pw-strength medium'; }
+      else { bar.className = 'pw-strength strong'; }
+    });
+
+    // --- Keyboard Shortcuts ---
+    document.addEventListener('keydown', (e) => {
+      // Don't trigger in input/textarea fields (except Escape)
+      const inInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName);
+
+      if (e.key === 'Escape') {
+        // Close any open modal
+        document.getElementById('change-password-modal')?.classList.add('hidden');
+        document.getElementById('export-modal')?.classList.add('hidden');
+        document.getElementById('template-modal')?.classList.add('hidden');
+        document.getElementById('bulk-confirm-modal')?.classList.add('hidden');
+        document.getElementById('shortcuts-help')?.classList.add('hidden');
+        document.getElementById('notif-dropdown')?.classList.remove('active');
+        return;
+      }
+
+      if (inInput) return;
+
+      if (e.ctrlKey && e.key === 'n') {
+        e.preventDefault();
+        document.getElementById('activity-type')?.focus();
+        document.getElementById('activity-form')?.scrollIntoView({ behavior: 'smooth' });
+      }
+      if (e.ctrlKey && e.key === 'f') {
+        e.preventDefault();
+        document.getElementById('search-activities')?.focus();
+      }
+      if (e.key === '?') {
+        document.getElementById('shortcuts-help')?.classList.toggle('hidden');
+      }
+    });
+
+    // --- Patch showDashboard to init new features ---
+    const _originalShowDashboard = showDashboard;
+    showDashboard = function() {
+      _originalShowDashboard();
+      // Init new features after dashboard is shown
+      setTimeout(() => {
+        loadDashboardSummary();
+        loadTemplates();
+        startNotifPolling();
+        updateWeeklyBadge();
+      }, 200);
+    };
+
+    // Patch fetchActivities to update weekly badge
+    const _originalFetchActivities = fetchActivities;
+    fetchActivities = async function() {
+      await _originalFetchActivities();
+      updateWeeklyBadge();
+    };
   </script>
 </body>
 </html>

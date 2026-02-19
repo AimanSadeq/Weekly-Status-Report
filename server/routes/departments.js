@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { requireAuth, requireAdmin } = require('../middleware/auth');
+const { logAudit } = require('../services/audit');
 
 // Check if Supabase is configured
 const HAS_SUPABASE = process.env.SUPABASE_URL && process.env.SUPABASE_KEY;
@@ -177,6 +178,8 @@ router.post('/', requireAuth, requireAdmin, async (req, res) => {
       console.error('Error creating department:', error);
       return res.status(500).json({ error: 'Failed to create department', details: error.message });
     }
+
+    logAudit({ action: 'create', entityType: 'department', entityId: department.id, actorEmail: req.user.email, actorName: req.user.name, changes: { name, description }, ipAddress: req.ip });
 
     res.status(201).json({
       success: true,

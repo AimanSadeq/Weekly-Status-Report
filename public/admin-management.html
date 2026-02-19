@@ -9,9 +9,11 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
+      darkMode: 'class',
       theme: {
         extend: {
           fontFamily: {
@@ -117,15 +119,20 @@
     }
 
     @keyframes slideIn {
-      from {
-        transform: translateX(400px);
-        opacity: 0;
-      }
-      to {
-        transform: translateX(0);
-        opacity: 1;
-      }
+      from { transform: translateX(400px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
     }
+    .skeleton { background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 4px; }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    .dark body, .dark .bg-gray-100 { background: #1a1a2e !important; }
+    .dark .bg-white { background: #16213e !important; }
+    .dark .text-gray-900, .dark .text-gray-800 { color: #e0e0e0 !important; }
+    .dark .text-gray-500, .dark .text-gray-600, .dark .text-gray-700 { color: #a0a0b0 !important; }
+    .dark .border-gray-200, .dark .border-gray-300 { border-color: #2a2a4a !important; }
+    .dark .bg-gray-50 { background: #1a1a2e !important; }
+    .dark .hover\:bg-gray-50:hover { background: #1e2a45 !important; }
+    .dark input, .dark select, .dark textarea { background: #1a1a2e !important; color: #e0e0e0 !important; border-color: #3a3a5a !important; }
+    .dark header { background: #0f3460 !important; border-color: #5391D5 !important; }
   </style>
 </head>
 <body class="bg-gray-100">
@@ -139,7 +146,11 @@
           </h1>
           <p class="text-indigo-500 text-sm">Department, Activity Type & Employee Configuration</p>
         </div>
-        <div class="flex gap-3">
+        <div class="flex gap-2 items-center">
+          <button id="dark-mode-toggle" class="p-2 text-indigo-700 hover:text-indigo-900 transition" title="Toggle Dark Mode">
+            <svg id="dark-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+            <svg id="light-icon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+          </button>
           <a href="/" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
             Back to Dashboard
           </a>
@@ -156,28 +167,128 @@
     <!-- Tabs -->
     <div class="bg-white rounded-lg shadow-md mb-6">
       <div class="border-b border-gray-200">
-        <nav class="flex -mb-px">
+        <nav class="flex -mb-px flex-wrap">
+          <button id="tab-admin-dashboard"
+                  class="tab-button px-4 py-3 text-sm font-medium border-b-2 border-indigo-500 text-indigo-600"
+                  data-tab="admin-dashboard">
+            Dashboard
+          </button>
+          <button id="tab-review-queue"
+                  class="tab-button px-4 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  data-tab="review-queue">
+            Review Queue
+          </button>
           <button id="tab-departments"
-                  class="tab-button px-6 py-4 text-sm font-medium border-b-2 border-indigo-500 text-indigo-600"
+                  class="tab-button px-4 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                   data-tab="departments">
-            🏢 Departments
+            Departments
           </button>
           <button id="tab-activity-types"
-                  class="tab-button px-6 py-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  class="tab-button px-4 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                   data-tab="activity-types">
-            📋 Activity Types
+            Activity Types
           </button>
           <button id="tab-employees"
-                  class="tab-button px-6 py-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  class="tab-button px-4 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                   data-tab="employees">
-            👥 Employees
+            Employees
+          </button>
+          <button id="tab-audit-log"
+                  class="tab-button px-4 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  data-tab="audit-log">
+            Audit Log
+          </button>
+          <button id="tab-benchmarks"
+                  class="tab-button px-4 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  data-tab="benchmarks">
+            Benchmarks
           </button>
         </nav>
       </div>
     </div>
 
+    <!-- Admin Dashboard Tab -->
+    <div id="admin-dashboard-tab" class="tab-content active">
+      <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h2 class="text-2xl font-bold text-gray-800 mb-4">Admin Dashboard</h2>
+        <!-- KPI Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg text-center">
+            <div class="text-blue-600 text-sm font-medium">Active Employees</div>
+            <div id="kpi-employees" class="text-3xl font-bold text-blue-900">-</div>
+          </div>
+          <div class="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg text-center">
+            <div class="text-green-600 text-sm font-medium">Activities (Month)</div>
+            <div id="kpi-activities" class="text-3xl font-bold text-green-900">-</div>
+          </div>
+          <div class="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg text-center">
+            <div class="text-purple-600 text-sm font-medium">Avg Units/Employee</div>
+            <div id="kpi-avg-units" class="text-3xl font-bold text-purple-900">-</div>
+          </div>
+          <div class="bg-gradient-to-br from-orange-50 to-orange-100 p-4 rounded-lg text-center">
+            <div class="text-orange-600 text-sm font-medium">Pending Reviews</div>
+            <div id="kpi-pending" class="text-3xl font-bold text-orange-900">-</div>
+          </div>
+        </div>
+        <!-- Charts -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="bg-white border border-gray-200 rounded-lg p-4">
+            <h3 class="text-sm font-bold text-gray-700 mb-2">Activity Trends (30 Days)</h3>
+            <div style="height:250px;"><canvas id="admin-trend-chart"></canvas></div>
+          </div>
+          <div class="bg-white border border-gray-200 rounded-lg p-4">
+            <h3 class="text-sm font-bold text-gray-700 mb-2">Department Utilization</h3>
+            <div style="height:250px;"><canvas id="admin-dept-chart"></canvas></div>
+          </div>
+          <div class="bg-white border border-gray-200 rounded-lg p-4">
+            <h3 class="text-sm font-bold text-gray-700 mb-2">Activity Type Distribution</h3>
+            <div style="height:250px;"><canvas id="admin-type-chart"></canvas></div>
+          </div>
+          <div class="bg-white border border-gray-200 rounded-lg p-4">
+            <h3 class="text-sm font-bold text-gray-700 mb-2">Top Performers</h3>
+            <div style="height:250px;"><canvas id="admin-performers-chart"></canvas></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Review Queue Tab -->
+    <div id="review-queue-tab" class="tab-content">
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-2xl font-bold text-gray-800">Review Queue</h2>
+          <div class="flex gap-2">
+            <select id="review-dept-filter" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+              <option value="">All Departments</option>
+            </select>
+            <button id="bulk-approve-btn" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium">Approve Selected</button>
+            <button id="bulk-reject-btn" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium">Reject Selected</button>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-4 py-3"><input type="checkbox" id="review-select-all" /></th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Employee</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Department</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Activity</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Units</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="review-queue-body" class="bg-white divide-y divide-gray-200">
+              <tr><td colspan="8" class="px-4 py-8 text-center text-gray-500">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- Departments Tab -->
-    <div id="departments-tab" class="tab-content active">
+    <div id="departments-tab" class="tab-content">
       <div class="bg-white rounded-lg shadow-md p-6">
         <div class="flex justify-between items-center mb-6">
           <h2 class="text-2xl font-bold text-gray-800">Department Management</h2>
@@ -327,6 +438,71 @@
               </tr>
             </tbody>
           </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Audit Log Tab -->
+    <div id="audit-log-tab" class="tab-content">
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-2xl font-bold text-gray-800 mb-4">Audit Log</h2>
+        <div class="flex flex-wrap gap-3 mb-4">
+          <select id="audit-entity-filter" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+            <option value="">All Entity Types</option>
+            <option value="activity">Activity</option>
+            <option value="employee">Employee</option>
+            <option value="department">Department</option>
+            <option value="activity_type">Activity Type</option>
+          </select>
+          <input type="text" id="audit-actor-filter" placeholder="Filter by actor email" class="px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+          <input type="date" id="audit-start-date" class="px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+          <input type="date" id="audit-end-date" class="px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+          <button id="audit-filter-btn" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700">Filter</button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Timestamp</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Entity</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actor</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Changes</th>
+              </tr>
+            </thead>
+            <tbody id="audit-log-body" class="bg-white divide-y divide-gray-200">
+              <tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">Click "Filter" to load audit log</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="flex justify-between items-center mt-4">
+          <span id="audit-page-info" class="text-sm text-gray-500"></span>
+          <div class="flex gap-2">
+            <button id="audit-prev" class="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm" disabled>Previous</button>
+            <button id="audit-next" class="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm">Next</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Benchmarks Tab -->
+    <div id="benchmarks-tab" class="tab-content">
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-2xl font-bold text-gray-800 mb-4">Comparison & Benchmarks</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <!-- Period Comparison -->
+          <div class="border border-gray-200 rounded-lg p-4">
+            <h3 class="text-lg font-bold text-gray-700 mb-3">Period Comparison</h3>
+            <div class="flex gap-2 mb-3">
+              <button id="bench-this-vs-last" class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700">This Month vs Last Month</button>
+            </div>
+            <div id="bench-period-result" class="space-y-2"></div>
+          </div>
+          <!-- Department Comparison -->
+          <div class="border border-gray-200 rounded-lg p-4">
+            <h3 class="text-lg font-bold text-gray-700 mb-3">Department Comparison</h3>
+            <div style="height:250px;"><canvas id="bench-dept-chart"></canvas></div>
+          </div>
         </div>
       </div>
     </div>
@@ -537,9 +713,23 @@
 
     // Initialize
     document.addEventListener('DOMContentLoaded', () => {
+      // Init dark mode
+      if (localStorage.getItem('vif-dark-mode') === 'true') {
+        document.documentElement.classList.add('dark');
+        document.getElementById('dark-icon')?.classList.add('hidden');
+        document.getElementById('light-icon')?.classList.remove('hidden');
+      }
+      document.getElementById('dark-mode-toggle')?.addEventListener('click', () => {
+        const isDark = document.documentElement.classList.toggle('dark');
+        localStorage.setItem('vif-dark-mode', isDark);
+        document.getElementById('dark-icon')?.classList.toggle('hidden', isDark);
+        document.getElementById('light-icon')?.classList.toggle('hidden', !isDark);
+      });
+
       loadDepartments();
       loadActivityTypes();
       loadEmployees();
+      loadAdminDashboard();
 
       // Form submit handlers
       document.getElementById('department-form').addEventListener('submit', handleDepartmentSubmit);
@@ -556,30 +746,43 @@
 
       // Close modal when clicking outside
       document.getElementById('department-modal').addEventListener('click', (e) => {
-        if (e.target.id === 'department-modal') {
-          closeDepartmentModal();
-        }
+        if (e.target.id === 'department-modal') closeDepartmentModal();
       });
       document.getElementById('activity-type-modal').addEventListener('click', (e) => {
-        if (e.target.id === 'activity-type-modal') {
-          closeActivityTypeModal();
-        }
+        if (e.target.id === 'activity-type-modal') closeActivityTypeModal();
       });
       document.getElementById('employee-modal').addEventListener('click', (e) => {
-        if (e.target.id === 'employee-modal') {
-          closeEmployeeModal();
-        }
+        if (e.target.id === 'employee-modal') closeEmployeeModal();
       });
 
       // Tab button handlers
+      document.getElementById('tab-admin-dashboard').addEventListener('click', () => switchTab('admin-dashboard'));
+      document.getElementById('tab-review-queue').addEventListener('click', () => { switchTab('review-queue'); loadReviewQueue(); });
       document.getElementById('tab-departments').addEventListener('click', () => switchTab('departments'));
       document.getElementById('tab-activity-types').addEventListener('click', () => switchTab('activity-types'));
       document.getElementById('tab-employees').addEventListener('click', () => switchTab('employees'));
+      document.getElementById('tab-audit-log').addEventListener('click', () => switchTab('audit-log'));
+      document.getElementById('tab-benchmarks').addEventListener('click', () => { switchTab('benchmarks'); loadBenchmarks(); });
 
       // Add buttons
       document.getElementById('add-department-btn').addEventListener('click', () => openDepartmentModal());
       document.getElementById('add-activity-type-btn').addEventListener('click', () => openActivityTypeModal());
       document.getElementById('add-employee-btn').addEventListener('click', () => openEmployeeModal());
+
+      // Audit log handlers
+      document.getElementById('audit-filter-btn').addEventListener('click', () => loadAuditLog(1));
+      document.getElementById('audit-prev').addEventListener('click', () => { if (auditPage > 1) loadAuditLog(auditPage - 1); });
+      document.getElementById('audit-next').addEventListener('click', () => loadAuditLog(auditPage + 1));
+
+      // Review queue handlers
+      document.getElementById('review-select-all')?.addEventListener('change', (e) => {
+        document.querySelectorAll('.review-check').forEach(cb => cb.checked = e.target.checked);
+      });
+      document.getElementById('bulk-approve-btn')?.addEventListener('click', () => bulkReview('approve'));
+      document.getElementById('bulk-reject-btn')?.addEventListener('click', () => bulkReview('reject'));
+
+      // Benchmark handlers
+      document.getElementById('bench-this-vs-last')?.addEventListener('click', loadPeriodComparison);
 
       // Logout handler
       document.getElementById('logout-button').addEventListener('click', () => {
@@ -1350,6 +1553,286 @@
       const div = document.createElement('div');
       div.textContent = text;
       return div.innerHTML;
+    }
+
+    // ============================================
+    // Admin Dashboard
+    // ============================================
+    let adminTrendChart = null, adminDeptChart = null, adminTypeChart = null, adminPerformersChart = null;
+
+    async function loadAdminDashboard() {
+      try {
+        const now = new Date();
+        const startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+        const endDate = now.toISOString().split('T')[0];
+
+        const response = await authFetch(`/api/analytics/admin-summary?startDate=${startDate}&endDate=${endDate}`);
+        const data = await response.json();
+        if (!data.success) return;
+
+        const s = data.summary || {};
+        document.getElementById('kpi-employees').textContent = s.activeEmployees || 0;
+        document.getElementById('kpi-activities').textContent = s.totalActivities || 0;
+        document.getElementById('kpi-avg-units').textContent = s.avgUnitsPerEmployee ? Math.round(s.avgUnitsPerEmployee) : 0;
+        document.getElementById('kpi-pending').textContent = s.pendingReviews || 0;
+
+        // Activity Trends chart
+        const trends = s.dailyTrend || [];
+        if (adminTrendChart) adminTrendChart.destroy();
+        const ctx1 = document.getElementById('admin-trend-chart');
+        if (ctx1 && trends.length > 0) {
+          adminTrendChart = new Chart(ctx1.getContext('2d'), {
+            type: 'line',
+            data: {
+              labels: trends.map(t => t.date),
+              datasets: [{ label: 'Activities', data: trends.map(t => t.count), borderColor: '#5391D5', backgroundColor: 'rgba(83,145,213,0.1)', fill: true, tension: 0.3 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+          });
+        }
+
+        // Department Utilization bar chart
+        const depts = s.byDepartment || {};
+        const deptLabels = Object.keys(depts);
+        if (adminDeptChart) adminDeptChart.destroy();
+        const ctx2 = document.getElementById('admin-dept-chart');
+        if (ctx2 && deptLabels.length > 0) {
+          adminDeptChart = new Chart(ctx2.getContext('2d'), {
+            type: 'bar',
+            data: {
+              labels: deptLabels,
+              datasets: [{ label: 'Activities', data: deptLabels.map(k => depts[k]?.count || 0), backgroundColor: '#356daa' }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+          });
+        }
+
+        // Activity Type Distribution doughnut
+        const types = s.byType || {};
+        const typeLabels = Object.keys(types);
+        if (adminTypeChart) adminTypeChart.destroy();
+        const ctx3 = document.getElementById('admin-type-chart');
+        if (ctx3 && typeLabels.length > 0) {
+          adminTypeChart = new Chart(ctx3.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+              labels: typeLabels,
+              datasets: [{ data: typeLabels.map(k => types[k]?.count || 0), backgroundColor: ['#356daa','#5391D5','#84aed9','#b3cce8','#10b981','#f59e0b','#ef4444','#8b5cf6'] }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { font: { size: 10 } } } } }
+          });
+        }
+
+        // Top Performers horizontal bar
+        const performers = s.topPerformers || [];
+        if (adminPerformersChart) adminPerformersChart.destroy();
+        const ctx4 = document.getElementById('admin-performers-chart');
+        if (ctx4 && performers.length > 0) {
+          adminPerformersChart = new Chart(ctx4.getContext('2d'), {
+            type: 'bar',
+            data: {
+              labels: performers.map(p => p.name || p.email),
+              datasets: [{ label: 'Activities', data: performers.map(p => p.count), backgroundColor: '#10b981' }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } } }
+          });
+        }
+      } catch (e) {
+        console.error('Admin dashboard error:', e);
+      }
+    }
+
+    // ============================================
+    // Review Queue
+    // ============================================
+    async function loadReviewQueue() {
+      try {
+        const dept = document.getElementById('review-dept-filter')?.value || '';
+        const url = `/api/activities/review-queue?status=submitted${dept ? '&department=' + encodeURIComponent(dept) : ''}`;
+        const response = await authFetch(url);
+        const data = await response.json();
+        if (!data.success) return;
+
+        const activities = data.activities || [];
+        const tbody = document.getElementById('review-queue-body');
+
+        if (activities.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="8" class="px-4 py-8 text-center text-gray-500">No activities pending review</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = activities.map(a => `
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-3"><input type="checkbox" class="review-check" value="${escapeHtml(a.id)}" /></td>
+            <td class="px-4 py-3 text-sm">${escapeHtml((a.week || a.activityDate || '').split('T')[0])}</td>
+            <td class="px-4 py-3 text-sm">${escapeHtml(a.name || a.email || '')}</td>
+            <td class="px-4 py-3 text-sm">${escapeHtml(a.department || '')}</td>
+            <td class="px-4 py-3 text-sm font-medium">${escapeHtml(a.activityType || a.title || '')}</td>
+            <td class="px-4 py-3 text-sm">${a.units || 0}</td>
+            <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">${escapeHtml(a.status || 'submitted')}</span></td>
+            <td class="px-4 py-3 text-sm">
+              <button class="text-green-600 hover:text-green-800 font-medium mr-2" onclick="reviewSingle('${escapeHtml(a.id)}','approve')">Approve</button>
+              <button class="text-red-600 hover:text-red-800 font-medium" onclick="reviewSingle('${escapeHtml(a.id)}','reject')">Reject</button>
+            </td>
+          </tr>
+        `).join('');
+      } catch (e) {
+        console.error('Review queue error:', e);
+      }
+    }
+
+    window.reviewSingle = async function(id, action) {
+      const feedback = action === 'reject' ? prompt('Feedback for rejection (optional):') : '';
+      try {
+        await authFetch(`/api/activities/${id}/review`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: action === 'approve' ? 'approved' : 'needs_revision', feedback: feedback || '' })
+        });
+        showNotification(`Activity ${action}d`);
+        loadReviewQueue();
+      } catch (e) { showNotification('Review failed', 'error'); }
+    };
+
+    async function bulkReview(action) {
+      const checked = document.querySelectorAll('.review-check:checked');
+      if (checked.length === 0) return showNotification('Select activities first', 'error');
+      const ids = Array.from(checked).map(cb => cb.value);
+      const feedback = action === 'reject' ? prompt('Feedback for rejection (optional):') : '';
+      try {
+        await authFetch('/api/activities/bulk-review', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ activityIds: ids, action, feedback: feedback || '' })
+        });
+        showNotification(`${ids.length} activities ${action}d`);
+        loadReviewQueue();
+      } catch (e) { showNotification('Bulk review failed', 'error'); }
+    }
+
+    // ============================================
+    // Audit Log
+    // ============================================
+    let auditPage = 1;
+
+    async function loadAuditLog(page = 1) {
+      auditPage = page;
+      try {
+        const entityType = document.getElementById('audit-entity-filter')?.value || '';
+        const actorEmail = document.getElementById('audit-actor-filter')?.value || '';
+        const startDate = document.getElementById('audit-start-date')?.value || '';
+        const endDate = document.getElementById('audit-end-date')?.value || '';
+
+        const params = new URLSearchParams({ page, limit: 25 });
+        if (entityType) params.set('entityType', entityType);
+        if (actorEmail) params.set('actorEmail', actorEmail);
+        if (startDate) params.set('startDate', startDate);
+        if (endDate) params.set('endDate', endDate);
+
+        const response = await authFetch(`/api/analytics/audit-log?${params}`);
+        const data = await response.json();
+        if (!data.success) return;
+
+        const logs = data.logs || [];
+        const tbody = document.getElementById('audit-log-body');
+
+        if (logs.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">No audit log entries found</td></tr>';
+        } else {
+          tbody.innerHTML = logs.map(log => `
+            <tr class="hover:bg-gray-50">
+              <td class="px-4 py-3 text-xs text-gray-500">${log.created_at ? new Date(log.created_at).toLocaleString() : ''}</td>
+              <td class="px-4 py-3 text-sm font-medium capitalize">${escapeHtml(log.action || '')}</td>
+              <td class="px-4 py-3 text-sm">${escapeHtml(log.entity_type || '')} ${log.entity_id ? '(' + escapeHtml(log.entity_id.substring(0,8)) + '...)' : ''}</td>
+              <td class="px-4 py-3 text-sm">${escapeHtml(log.actor_name || log.actor_email || '')}</td>
+              <td class="px-4 py-3 text-xs text-gray-500 max-w-xs truncate">${log.changes ? escapeHtml(JSON.stringify(log.changes).substring(0, 100)) : '-'}</td>
+            </tr>
+          `).join('');
+        }
+
+        document.getElementById('audit-page-info').textContent = `Page ${page}${data.totalPages ? ' of ' + data.totalPages : ''}`;
+        document.getElementById('audit-prev').disabled = page <= 1;
+        document.getElementById('audit-next').disabled = logs.length < 25;
+      } catch (e) {
+        console.error('Audit log error:', e);
+      }
+    }
+
+    // ============================================
+    // Benchmarks
+    // ============================================
+    let benchDeptChart = null;
+
+    async function loadBenchmarks() {
+      try {
+        const response = await authFetch('/api/benchmarks/department-comparison');
+        const data = await response.json();
+        if (!data.success) return;
+
+        const comparison = data.comparison || [];
+        if (benchDeptChart) benchDeptChart.destroy();
+        const ctx = document.getElementById('bench-dept-chart');
+        if (ctx && comparison.length > 0) {
+          benchDeptChart = new Chart(ctx.getContext('2d'), {
+            type: 'bar',
+            data: {
+              labels: comparison.map(c => c.department),
+              datasets: [
+                { label: 'Activities', data: comparison.map(c => c.activityCount || 0), backgroundColor: '#356daa' },
+                { label: 'Total Units', data: comparison.map(c => c.totalUnits || 0), backgroundColor: '#10b981' }
+              ]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+          });
+        }
+      } catch (e) { console.error('Benchmarks error:', e); }
+    }
+
+    async function loadPeriodComparison() {
+      try {
+        const now = new Date();
+        const currentStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+        const currentEnd = now.toISOString().split('T')[0];
+        const previousStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0];
+        const previousEnd = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split('T')[0];
+
+        const response = await authFetch(`/api/benchmarks/period-comparison?currentStart=${currentStart}&currentEnd=${currentEnd}&previousStart=${previousStart}&previousEnd=${previousEnd}`);
+        const data = await response.json();
+        if (!data.success) return;
+
+        const c = data.comparison || {};
+        const container = document.getElementById('bench-period-result');
+        container.innerHTML = `
+          <div class="grid grid-cols-2 gap-3">
+            <div class="p-3 bg-blue-50 rounded-lg">
+              <div class="text-xs text-blue-600 font-medium">This Month Activities</div>
+              <div class="text-xl font-bold text-blue-900">${c.current?.activityCount || 0}</div>
+            </div>
+            <div class="p-3 bg-gray-50 rounded-lg">
+              <div class="text-xs text-gray-600 font-medium">Last Month Activities</div>
+              <div class="text-xl font-bold text-gray-900">${c.previous?.activityCount || 0}</div>
+            </div>
+            <div class="p-3 bg-green-50 rounded-lg">
+              <div class="text-xs text-green-600 font-medium">This Month Units</div>
+              <div class="text-xl font-bold text-green-900">${c.current?.totalUnits || 0}</div>
+            </div>
+            <div class="p-3 bg-gray-50 rounded-lg">
+              <div class="text-xs text-gray-600 font-medium">Last Month Units</div>
+              <div class="text-xl font-bold text-gray-900">${c.previous?.totalUnits || 0}</div>
+            </div>
+          </div>
+          ${c.changes ? `
+          <div class="mt-3 p-3 border border-gray-200 rounded-lg">
+            <div class="text-sm font-medium text-gray-700">Change</div>
+            <div class="text-sm ${(c.changes.activityCountChange || 0) >= 0 ? 'text-green-600' : 'text-red-600'}">
+              Activities: ${(c.changes.activityCountChange || 0) >= 0 ? '+' : ''}${c.changes.activityCountChange || 0}%
+            </div>
+            <div class="text-sm ${(c.changes.totalUnitsChange || 0) >= 0 ? 'text-green-600' : 'text-red-600'}">
+              Units: ${(c.changes.totalUnitsChange || 0) >= 0 ? '+' : ''}${c.changes.totalUnitsChange || 0}%
+            </div>
+          </div>` : ''}
+        `;
+      } catch (e) { console.error('Period comparison error:', e); }
     }
   </script>
 </body>

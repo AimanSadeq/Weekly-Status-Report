@@ -273,3 +273,4 @@ async function sendFeedbackNotification({ email, name, activityName, feedback })
 
 module.exports = router;
 module.exports.sendFeedbackNotification = sendFeedbackNotification;
+module.exports.sendEmail = sendEmail;

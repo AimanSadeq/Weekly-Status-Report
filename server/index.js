@@ -24,6 +24,11 @@ const emailRoutes = require('./routes/email');
 const metadataRoutes = require('./routes/metadata');
 const departmentRoutes = require('./routes/departments');
 const activityTypeRoutes = require('./routes/activity-types');
+const analyticsRoutes = require('./routes/analytics');
+const reportsRoutes = require('./routes/reports');
+const templateRoutes = require('./routes/templates');
+const notificationRoutes = require('./routes/notifications');
+const benchmarkRoutes = require('./routes/benchmarks');
 
 // Middleware
 app.use(helmet({
@@ -42,11 +47,12 @@ app.use(helmet({
         "'self'",
         "'unsafe-inline'",
         "https://cdn.tailwindcss.com",
-        "https://cdn.jsdelivr.net"
+        "https://cdn.jsdelivr.net",
+        "https://fonts.googleapis.com"
       ],
       imgSrc: ["'self'", "data:", "https:"],
       connectSrc: ["'self'"],
-      fontSrc: ["'self'", "https://cdn.jsdelivr.net"],
+      fontSrc: ["'self'", "https://cdn.jsdelivr.net", "https://fonts.gstatic.com"],
       objectSrc: ["'none'"],
       mediaSrc: ["'self'"],
       frameSrc: ["'none'"]
@@ -58,13 +64,13 @@ app.use(cors({
   origin: process.env.APP_URL || '*',
   credentials: true
 }));
-app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
+  max: 200 // increased for new features
 });
 app.use('/api/', limiter);
 
@@ -87,14 +93,28 @@ app.use('/api/email', emailRoutes);
 app.use('/api/metadata', metadataRoutes);
 app.use('/api/departments', departmentRoutes);
 app.use('/api/activity-types', activityTypeRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/reports', reportsRoutes);
+app.use('/api/templates', templateRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/benchmarks', benchmarkRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
+  res.json({
+    status: 'ok',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development'
   });
+});
+
+// Serve HTML pages
+app.get('/calendar.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'calendar.html'));
+});
+
+app.get('/reports.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'reports.html'));
 });
 
 // Serve React app for all other routes (when built)
@@ -105,7 +125,7 @@ app.get('*', (req, res) => {
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({ 
+  res.status(500).json({
     error: 'Something went wrong!',
     message: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
@@ -116,6 +136,14 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 VIFM Activity Tracker Server running on port ${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔗 API available at: http://localhost:${PORT}/api`);
+
+  // Initialize cron jobs
+  try {
+    const { initWeeklyDigest } = require('./jobs/weekly-digest');
+    initWeeklyDigest();
+  } catch (error) {
+    console.log('Weekly digest initialization skipped:', error.message);
+  }
 });
 
 module.exports = app;

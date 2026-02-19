@@ -4,6 +4,8 @@ const bcrypt = require('bcryptjs');
 const db = require('../models/db');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 
+const { logAudit } = require('../services/audit');
+
 const DEFAULT_PASSWORD = process.env.DEFAULT_PASSWORD || 'Vifm2025!';
 const SALT_ROUNDS = 10;
 
@@ -146,6 +148,8 @@ router.post('/employees', requireAuth, requireAdmin, async (req, res) => {
         }
       }
 
+      logAudit({ action: 'create', entityType: 'employee', entityId: employee.id, actorEmail: req.user.email, actorName: req.user.name, changes: { name, email, role }, ipAddress: req.ip });
+
       return res.status(201).json({
         success: true,
         message: 'Employee created successfully',
@@ -220,6 +224,8 @@ router.put('/employees/:id', requireAuth, requireAdmin, async (req, res) => {
         }
       }
 
+      logAudit({ action: 'update', entityType: 'employee', entityId: id, actorEmail: req.user.email, actorName: req.user.name, changes: { name, email, role, visibilityScope }, ipAddress: req.ip });
+
       return res.json({
         success: true,
         message: 'Employee updated successfully',
@@ -263,6 +269,8 @@ router.delete('/employees/:id', requireAuth, requireAdmin, async (req, res) => {
         console.error('Error deactivating employee:', error);
         return res.status(500).json({ error: 'Failed to deactivate employee' });
       }
+
+      logAudit({ action: 'deactivate', entityType: 'employee', entityId: id, actorEmail: req.user.email, actorName: req.user.name, ipAddress: req.ip });
 
       return res.json({
         success: true,

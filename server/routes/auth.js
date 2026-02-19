@@ -46,6 +46,18 @@ router.post('/login', async (req, res) => {
     // Generate JWT token
     const token = generateToken(user);
 
+    // Update last login timestamp
+    try {
+      const HAS_SUPABASE = process.env.SUPABASE_URL && process.env.SUPABASE_KEY;
+      if (HAS_SUPABASE) {
+        const { createClient } = require('@supabase/supabase-js');
+        const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+        await sb.from('employees').update({ last_login_at: new Date().toISOString() }).eq('email', email);
+      }
+    } catch (e) {
+      // Don't fail login if last_login update fails
+    }
+
     // Return user data (exclude passwordHash)
     res.json({
       success: true,

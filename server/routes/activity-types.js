@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { requireAuth, requireAdmin } = require('../middleware/auth');
+const { logAudit } = require('../services/audit');
 
 // Check if Supabase is configured
 const HAS_SUPABASE = process.env.SUPABASE_URL && process.env.SUPABASE_KEY;
@@ -235,6 +236,8 @@ router.post('/', requireAuth, requireAdmin, async (req, res) => {
         // Don't fail the request, just log the error
       }
     }
+
+    logAudit({ action: 'create', entityType: 'activity_type', entityId: activityType.id, actorEmail: req.user.email, actorName: req.user.name, changes: { name, category }, ipAddress: req.ip });
 
     res.status(201).json({
       success: true,

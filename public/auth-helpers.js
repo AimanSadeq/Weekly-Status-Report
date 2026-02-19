@@ -45,3 +45,30 @@ function escapeHtml(text) {
   };
   return String(text).replace(/[&<>"']/g, m => map[m]);
 }
+
+// Session timeout - auto-logout after 30 minutes of inactivity
+(function initSessionTimeout() {
+  const TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+  let timeoutId = null;
+
+  function resetTimer() {
+    if (timeoutId) clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => {
+      const token = localStorage.getItem('vif-token');
+      if (token) {
+        localStorage.removeItem('vif-token');
+        localStorage.removeItem('vif-user');
+        alert('Your session has expired due to inactivity. Please log in again.');
+        window.location.href = '/';
+      }
+    }, TIMEOUT_MS);
+  }
+
+  // Track user activity
+  ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(event => {
+    document.addEventListener(event, resetTimer, { passive: true });
+  });
+
+  // Start timer
+  resetTimer();
+})();
