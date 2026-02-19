@@ -1319,6 +1319,10 @@
                       class="text-indigo-600 hover:text-indigo-900 mr-3">
                 Edit
               </button>
+              <button data-action="reset-pwd" data-id="${emp.id}"
+                      class="text-orange-600 hover:text-orange-900 mr-3">
+                Reset Password
+              </button>
               <button data-action="delete-emp" data-id="${emp.id}"
                       class="text-red-600 hover:text-red-900">
                 Deactivate
@@ -1336,6 +1340,8 @@
 
           if (action === 'edit-emp') {
             editEmployee(id);
+          } else if (action === 'reset-pwd') {
+            resetEmployeePassword(id);
           } else if (action === 'delete-emp') {
             deleteEmployee(id);
           }
@@ -1510,6 +1516,22 @@
 
     function editEmployee(id) {
       openEmployeeModal(id);
+    }
+
+    async function resetEmployeePassword(id) {
+      const emp = employees.find(e => e.id === id);
+      const name = emp ? emp.name : 'this employee';
+      if (!confirm(`Reset password for ${name} to the default (Vifm2025!)?`)) return;
+
+      try {
+        const response = await authFetch(`/api/users/employees/${id}/reset-password`, { method: 'POST' });
+        const data = await response.json();
+        if (!data.success) throw new Error(data.error || 'Failed to reset password');
+        showNotification(data.message, 'success');
+      } catch (error) {
+        console.error('Reset password error:', error);
+        showNotification(error.message, 'error');
+      }
     }
 
     async function deleteEmployee(id) {

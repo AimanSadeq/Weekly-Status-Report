@@ -286,6 +286,46 @@ router.delete('/employees/:id', requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
+// POST /api/users/employees/:id/reset-password — admin resets an employee's password
+router.post('/employees/:id/reset-password', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { newPassword } = req.body;
+    const password = newPassword || DEFAULT_PASSWORD;
+
+    if (password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    }
+
+    if (HAS_SUPABASE) {
+      const hash = await bcrypt.hash(password, SALT_ROUNDS);
+      const { data, error } = await supabase
+        .from('employees')
+        .update({ password_hash: hash, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .select('id, email, full_name')
+        .single();
+
+      if (error || !data) {
+        return res.status(404).json({ error: 'Employee not found' });
+      }
+
+      logAudit({ action: 'reset-password', entityType: 'employee', entityId: id, actorEmail: req.user.email, actorName: req.user.name, ipAddress: req.ip });
+
+      return res.json({
+        success: true,
+        message: `Password reset for ${data.full_name || data.email}`,
+        resetToDefault: !newPassword
+      });
+    }
+
+    res.status(501).json({ error: 'Not supported in non-Supabase mode' });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ error: 'Failed to reset password' });
+  }
+});
+
 // ==================== EXISTING USER ROUTES ====================
 
 // Get single user
