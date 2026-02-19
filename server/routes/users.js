@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
+const bcrypt = require('bcryptjs');
 const db = require('../models/db');
+
+const DEFAULT_PASSWORD = 'Vifm2025!';
+const SALT_ROUNDS = 10;
 
 // Check if Supabase is configured
 const HAS_SUPABASE = process.env.SUPABASE_URL && process.env.SUPABASE_KEY;
@@ -99,6 +103,9 @@ router.post('/employees', async (req, res) => {
     }
 
     if (HAS_SUPABASE) {
+      // Hash default password for new employee
+      const passwordHash = await bcrypt.hash(DEFAULT_PASSWORD, SALT_ROUNDS);
+
       // Create employee
       const { data: employee, error: empError } = await supabase
         .from('employees')
@@ -108,6 +115,7 @@ router.post('/employees', async (req, res) => {
           is_admin: role === 'admin',
           visibility_scope: visibilityScope || 'self',
           is_active: true,
+          password_hash: passwordHash,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         }])

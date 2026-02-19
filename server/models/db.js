@@ -227,7 +227,8 @@ class DBModel {
         role: data.is_admin ? 'admin' : 'employee',
         visibilityScope: data.visibility_scope || 'self',
         departments: [],
-        id: data.id
+        id: data.id,
+        passwordHash: data.password_hash || null
       };
     }
 
@@ -299,6 +300,29 @@ class DBModel {
       users.push(JSON.parse(user));
     }
     return users;
+  }
+
+  async updatePassword(email, passwordHash) {
+    if (HAS_SUPABASE) {
+      const { error } = await storage.supabase
+        .from('employees')
+        .update({ password_hash: passwordHash, updated_at: new Date().toISOString() })
+        .eq('email', email);
+
+      if (error) {
+        console.error('Error updating password:', error);
+        throw new Error('Failed to update password');
+      }
+      return true;
+    }
+
+    // Fallback for local/replit storage
+    const user = await this.getUser(email);
+    if (!user) throw new Error('User not found');
+
+    user.passwordHash = passwordHash;
+    await storage.set(`user:${email}`, JSON.stringify(user));
+    return true;
   }
 
   // ==================== ACTIVITIES ====================
