@@ -9,7 +9,10 @@ const SALT_ROUNDS = 10;
 // Authenticate with email + password
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email: rawEmail, password } = req.body;
+
+    // Normalize email: trim whitespace and convert to lowercase
+    const email = rawEmail ? rawEmail.trim().toLowerCase() : '';
 
     // Validate email format
     if (!email || !email.endsWith('@viftraining.com')) {

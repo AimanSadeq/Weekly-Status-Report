@@ -206,11 +206,14 @@ class DBModel {
   // ==================== USERS ====================
 
   async getUser(email) {
+    // Normalize email to lowercase and trim whitespace
+    const normalizedEmail = email ? email.trim().toLowerCase() : '';
+
     if (HAS_SUPABASE) {
       const { data, error } = await storage.supabase
         .from('employees')
         .select('*')
-        .eq('email', email)
+        .ilike('email', normalizedEmail)
         .single();
 
       if (error && error.code !== 'PGRST116') {
@@ -232,7 +235,7 @@ class DBModel {
       };
     }
 
-    const user = await storage.get(`user:${email}`);
+    const user = await storage.get(`user:${normalizedEmail}`);
     return user ? JSON.parse(user) : null;
   }
 

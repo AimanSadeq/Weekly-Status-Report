@@ -2,7 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+  <meta name="description" content="VIFM Admin Panel - Manage departments, activity types, employees, review submissions and view audit logs for the activity tracking system.">
+  <link rel="canonical" id="canonical-url" href="/admin-management.html">
+  <script>document.getElementById('canonical-url').href = window.location.origin + '/admin-management.html';</script>
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-192x192.png">
+  <meta property="og:title" content="VIFM Admin - Department & Activity Management">
+  <meta property="og:description" content="Admin panel for managing departments, employees and activity types.">
+  <meta property="og:image" content="/vifm-logo.png">
   <title>VIFM Admin - Department & Activity Management</title>
   <!-- Google Fonts: Open Sans -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -142,7 +149,7 @@
       <div class="flex justify-between items-center">
         <div>
           <h1 class="text-2xl font-bold flex items-center gap-2">
-            <img src="/vifm-logo.png" alt="VIFM" class="h-8 w-auto"> Admin Management
+            <img src="/vifm-logo.png" alt="VIFM" width="1080" height="1080" class="h-8 w-auto"> Admin Management
           </h1>
           <p class="text-indigo-500 text-sm">Department, Activity Type & Employee Configuration</p>
         </div>
@@ -239,7 +246,7 @@
         <div class="flex justify-between items-center mb-4">
           <h2 class="text-2xl font-bold text-gray-800">Review Queue</h2>
           <div class="flex gap-2">
-            <select id="review-dept-filter" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+            <select id="review-dept-filter" aria-label="Filter by department" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
               <option value="">All Departments</option>
             </select>
             <button id="bulk-approve-btn" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium">Approve Selected</button>
@@ -428,7 +435,7 @@
       <div class="bg-white rounded-lg shadow-md p-6">
         <h2 class="text-2xl font-bold text-gray-800 mb-4">Audit Log</h2>
         <div class="flex flex-wrap gap-3 mb-4">
-          <select id="audit-entity-filter" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+          <select id="audit-entity-filter" aria-label="Filter by entity type" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
             <option value="">All Entity Types</option>
             <option value="activity">Activity</option>
             <option value="employee">Employee</option>
@@ -494,7 +501,7 @@
     <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 p-6">
       <div class="flex justify-between items-center mb-4">
         <h3 id="dept-modal-title" class="text-xl font-bold text-gray-800">Add Department</h3>
-        <button id="dept-modal-close" class="text-gray-400 hover:text-gray-600">
+        <button id="dept-modal-close" aria-label="Close department modal" class="text-gray-400 hover:text-gray-600">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
           </svg>
@@ -539,7 +546,7 @@
     <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 p-6">
       <div class="flex justify-between items-center mb-4">
         <h3 id="activity-modal-title" class="text-xl font-bold text-gray-800">Add Activity Type</h3>
-        <button id="activity-modal-close" class="text-gray-400 hover:text-gray-600">
+        <button id="activity-modal-close" aria-label="Close activity type modal" class="text-gray-400 hover:text-gray-600">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
           </svg>
@@ -596,7 +603,7 @@
     <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 p-6">
       <div class="flex justify-between items-center mb-4">
         <h3 id="emp-modal-title" class="text-xl font-bold text-gray-800">Add Employee</h3>
-        <button id="emp-modal-close" class="text-gray-400 hover:text-gray-600">
+        <button id="emp-modal-close" aria-label="Close employee modal" class="text-gray-400 hover:text-gray-600">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
           </svg>

@@ -2,33 +2,45 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="VIFM Tracker">
   <meta name="theme-color" content="#121140">
-  <meta name="description" content="Virginia Institute of Finance & Management Activity Tracking System - Mobile Admin">
+  <meta name="description" content="VIFM Activity Tracker - Track and report employee activities across 6 departments with 60+ activity types for VIFM.">
 
-  <title>VIFM Activity Tracker</title>
+  <title>VIFM Activity Tracker - Employee Activity Reporting System</title>
+
+  <!-- Canonical URL (updated at runtime by JS) -->
+  <link rel="canonical" id="canonical-url" href="/">
+  <script>document.getElementById('canonical-url').href = window.location.origin + '/';</script>
+
+  <!-- Open Graph Tags -->
+  <meta property="og:title" content="VIFM Activity Tracker - Employee Activity Reporting">
+  <meta property="og:description" content="Track, manage and report employee activities across departments. Weekly status reporting for Virginia Institute of Finance and Management.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="/vifm-logo.png">
 
   <!-- PWA Manifest -->
   <link rel="manifest" href="/manifest.json">
 
-  <!-- Apple Touch Icons -->
+  <!-- Apple Touch Icons & Favicon -->
   <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192x192.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-192x192.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-192x192.png">
 
-  <!-- Google Fonts: Open Sans -->
+  <!-- Preconnect to CDNs for faster loading -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
   <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <!-- SheetJS for Excel export -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -332,10 +344,10 @@
       justify-content: center;
     }
     .notif-dropdown {
-      position: absolute;
-      top: 100%;
-      right: 0;
-      width: 320px;
+      position: fixed;
+      top: auto;
+      right: 8px;
+      width: min(320px, calc(100vw - 16px));
       max-height: 400px;
       overflow-y: auto;
       background: white;
@@ -345,25 +357,95 @@
       z-index: 200;
       display: none;
     }
+    @media (min-width: 769px) {
+      .notif-dropdown {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        width: 320px;
+      }
+    }
     .notif-dropdown.active { display: block; }
     .dark .notif-dropdown { background: #16213e; border-color: #2a2a4a; }
+
+    /* Mobile header menu */
+    .mobile-menu-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 300;
+    }
+    .mobile-menu-overlay.active { display: block; }
+    .mobile-menu-panel {
+      position: fixed;
+      top: 0;
+      right: -280px;
+      width: 280px;
+      height: 100%;
+      background: white;
+      z-index: 301;
+      transition: right 0.3s ease;
+      overflow-y: auto;
+      box-shadow: -4px 0 24px rgba(0,0,0,0.15);
+    }
+    .mobile-menu-panel.active { right: 0; }
+    .dark .mobile-menu-panel { background: #16213e; }
 
     /* Password complexity indicator */
     .pw-strength { height: 4px; border-radius: 2px; transition: all 0.3s; }
     .pw-strength.weak { background: #ef4444; width: 33%; }
     .pw-strength.medium { background: #f59e0b; width: 66%; }
     .pw-strength.strong { background: #10b981; width: 100%; }
+
+    /* Mobile input fix - prevent iOS zoom */
+    @media screen and (max-width: 768px) {
+      input, select, textarea {
+        font-size: 16px !important;
+      }
+      /* Improve touch targets */
+      button, a, .filter-btn {
+        min-height: 44px;
+        min-width: 44px;
+      }
+      /* Notification toast centered on mobile */
+      .notification {
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
+        max-width: calc(100vw - 32px);
+        text-align: center;
+      }
+      @keyframes slideIn {
+        from { transform: translateX(-50%) translateY(-20px); opacity: 0; }
+        to { transform: translateX(-50%) translateY(0); opacity: 1; }
+      }
+      /* Better spacing for filter buttons on mobile */
+      .filter-btn {
+        min-height: 36px;
+        min-width: auto;
+        padding-left: 12px;
+        padding-right: 12px;
+      }
+    }
+
+    /* Safe area insets for notched devices */
+    @supports (padding: env(safe-area-inset-top)) {
+      header { padding-top: env(safe-area-inset-top); }
+      .bulk-toolbar { padding-bottom: env(safe-area-inset-bottom); }
+      main { padding-left: max(12px, env(safe-area-inset-left)); padding-right: max(12px, env(safe-area-inset-right)); }
+    }
   </style>
 </head>
 <body class="bg-gray-50">
   <!-- Login Section -->
-  <div id="login-section" class="min-h-screen flex items-center justify-center px-3 py-6">
+  <div id="login-section" class="min-h-screen flex items-center justify-center px-4 py-6">
     <div class="max-w-md w-full space-y-4 vif-box">
       <div class="text-center">
         <div class="mx-auto mb-3">
-          <img src="/vifm-logo.png" alt="VIFM Logo" class="mx-auto h-20 w-auto">
+          <img src="/vifm-logo.png" alt="VIFM Activity Tracker logo" width="1080" height="1080" class="mx-auto h-16 md:h-20 w-auto">
         </div>
-        <h2 class="text-center text-2xl font-extrabold text-gray-900">
+        <h2 class="text-center text-xl md:text-2xl font-extrabold text-gray-900">
           VIFM Activity Tracker
         </h2>
         <p class="mt-1 text-center text-xs text-gray-600 font-medium">
@@ -384,7 +466,7 @@
               name="email"
               type="email"
               required
-              class="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+              class="appearance-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 text-base md:text-sm"
               placeholder="Enter your email"
             />
           </div>
@@ -397,7 +479,7 @@
               name="password"
               type="password"
               required
-              class="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+              class="appearance-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 text-base md:text-sm"
               placeholder="Enter your password"
             />
           </div>
@@ -408,7 +490,7 @@
         <div>
           <button
             type="submit"
-            class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+            class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
           >
             <span id="login-button-text">Sign in</span>
             <div id="login-spinner" class="hidden ml-2 spinner" style="width: 20px; height: 20px; border-width: 2px;"></div>
@@ -424,22 +506,22 @@
     <header class="header-banner shadow-lg">
       <div class="max-w-7xl mx-auto px-3 py-3">
         <div class="flex justify-between items-center">
-          <div>
-            <h1 class="text-2xl font-bold flex items-center gap-2 text-indigo-900">
-              <img src="/vifm-logo.png" alt="VIFM" class="h-8 w-auto"> Activity Tracker
+          <div class="min-w-0 flex-1">
+            <h1 class="text-lg md:text-2xl font-bold flex items-center gap-2 text-indigo-900">
+              <img src="/vifm-logo.png" alt="VIFM" width="1080" height="1080" class="h-7 md:h-8 w-auto flex-shrink-0"> <span class="truncate">Activity Tracker</span>
             </h1>
-            <div class="mt-1 flex items-center space-x-3 text-sm">
-              <span id="user-name" class="font-semibold bg-indigo-100 text-indigo-900 px-2 py-0.5 rounded-full"></span>
+            <div class="mt-1 flex items-center space-x-2 md:space-x-3 text-xs md:text-sm overflow-x-auto">
+              <span id="user-name" class="font-semibold bg-indigo-100 text-indigo-900 px-2 py-0.5 rounded-full whitespace-nowrap"></span>
               <span class="text-indigo-400">•</span>
-              <span id="user-role" class="capitalize bg-indigo-100 text-indigo-900 px-2 py-0.5 rounded-full"></span>
+              <span id="user-role" class="capitalize bg-indigo-100 text-indigo-900 px-2 py-0.5 rounded-full whitespace-nowrap"></span>
             </div>
           </div>
-          <div class="flex gap-2 items-center">
+          <div class="flex gap-1 md:gap-2 items-center flex-shrink-0">
             <!-- Activity counter badge -->
-            <span id="weekly-activity-badge" class="hidden px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-xs font-bold"></span>
+            <span id="weekly-activity-badge" class="hidden px-2 md:px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-xs font-bold"></span>
             <!-- Notification bell -->
             <div class="relative" id="notif-container">
-              <button id="notif-bell" class="relative p-2 text-indigo-700 hover:text-indigo-900 transition" title="Notifications">
+              <button id="notif-bell" class="relative p-2 text-indigo-700 hover:text-indigo-900 transition min-w-[44px] min-h-[44px] flex items-center justify-center" title="Notifications">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
                 </svg>
@@ -455,7 +537,7 @@
               </div>
             </div>
             <!-- Dark mode toggle -->
-            <button id="dark-mode-toggle" class="p-2 text-indigo-700 hover:text-indigo-900 transition" title="Toggle Dark Mode">
+            <button id="dark-mode-toggle" class="p-2 text-indigo-700 hover:text-indigo-900 transition min-w-[44px] min-h-[44px] flex items-center justify-center" title="Toggle Dark Mode">
               <svg id="dark-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
               </svg>
@@ -463,29 +545,66 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
               </svg>
             </button>
+            <!-- Desktop buttons (hidden on mobile) -->
             <a
               id="admin-link"
               href="/admin-management.html"
-              class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all font-bold shadow-md hover:shadow-lg transform hover:-translate-y-0.5 hidden"
+              class="hidden md:inline-flex px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all font-bold shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
             >
               Admin
             </a>
             <button
               id="change-password-button"
-              class="px-3 py-2 bg-indigo-700 text-white rounded-lg hover:bg-indigo-600 transition-all font-bold shadow-md hover:shadow-lg transform hover:-translate-y-0.5 text-sm"
+              class="hidden md:inline-flex px-3 py-2 bg-indigo-700 text-white rounded-lg hover:bg-indigo-600 transition-all font-bold shadow-md hover:shadow-lg transform hover:-translate-y-0.5 text-sm"
             >
               Change Password
             </button>
             <button
               id="logout-button"
-              class="px-4 py-2 bg-indigo-900 text-white rounded-lg hover:bg-indigo-800 transition-all font-bold shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+              class="hidden md:inline-flex px-4 py-2 bg-indigo-900 text-white rounded-lg hover:bg-indigo-800 transition-all font-bold shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
             >
               Logout
+            </button>
+            <!-- Mobile hamburger menu button -->
+            <button
+              id="mobile-menu-button"
+              class="md:hidden p-2 text-indigo-700 hover:text-indigo-900 transition min-w-[44px] min-h-[44px] flex items-center justify-center"
+              title="Menu"
+            >
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+              </svg>
             </button>
           </div>
         </div>
       </div>
     </header>
+
+    <!-- Mobile Slide-out Menu -->
+    <div id="mobile-menu-overlay" class="mobile-menu-overlay"></div>
+    <div id="mobile-menu-panel" class="mobile-menu-panel">
+      <div class="p-4 border-b border-gray-200">
+        <div class="flex justify-between items-center">
+          <h3 class="font-bold text-lg text-gray-900">Menu</h3>
+          <button id="mobile-menu-close" aria-label="Close menu" class="p-2 text-gray-500 hover:text-gray-700 min-w-[44px] min-h-[44px] flex items-center justify-center">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <nav class="p-4 space-y-2">
+        <a id="admin-link-mobile" href="/admin-management.html" class="hidden w-full px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all font-bold text-sm text-center block">
+          Admin Panel
+        </a>
+        <button id="change-password-button-mobile" class="w-full px-4 py-3 bg-indigo-700 text-white rounded-lg hover:bg-indigo-600 transition-all font-bold text-sm text-center">
+          Change Password
+        </button>
+        <button id="logout-button-mobile" class="w-full px-4 py-3 bg-indigo-900 text-white rounded-lg hover:bg-indigo-800 transition-all font-bold text-sm text-center">
+          Logout
+        </button>
+      </nav>
+    </div>
 
     <!-- Main Content -->
     <main class="max-w-7xl mx-auto px-3 py-4">
@@ -522,7 +641,7 @@
         <div class="vif-header flex items-center justify-between">
           <h2 class="text-xl font-bold text-gray-900">Dashboard Summary</h2>
           <div class="flex gap-2 items-center">
-            <select id="summary-period" class="px-3 py-1 border border-gray-300 rounded-lg text-sm">
+            <select id="summary-period" aria-label="Summary period" class="px-3 py-1 border border-gray-300 rounded-lg text-sm">
               <option value="this-week">This Week</option>
               <option value="this-month" selected>This Month</option>
               <option value="last-month">Last Month</option>
@@ -656,7 +775,7 @@
           <div class="flex justify-end gap-2">
             <button
               type="submit"
-              class="px-4 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium flex items-center text-sm"
+              class="w-full md:w-auto px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium flex items-center justify-center text-sm"
             >
               <span id="add-button-text">➕ Add Activity</span>
               <div id="add-spinner" class="hidden ml-2 spinner" style="width: 16px; height: 16px; border-width: 2px;"></div>
@@ -675,10 +794,10 @@
               </h2>
               <p class="text-xs text-gray-600 mt-0.5">Track all your submitted activities</p>
             </div>
-            <div class="flex gap-2 flex-wrap">
-              <a href="/calendar.html" class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium text-sm">Calendar</a>
-              <a href="/reports.html" class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium text-sm">Reports</a>
-              <button id="export-csv-button" class="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center gap-2 text-sm">
+            <div class="flex gap-2 flex-wrap w-full md:w-auto">
+              <a href="/calendar.html" class="flex-1 md:flex-none text-center px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium text-sm">Calendar</a>
+              <a href="/reports.html" class="flex-1 md:flex-none text-center px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium text-sm">Reports</a>
+              <button id="export-csv-button" class="flex-1 md:flex-none px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center justify-center gap-2 text-sm">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                 </svg>
@@ -692,10 +811,12 @@
         <div class="mb-4 space-y-3">
           <!-- Search Bar -->
           <div class="relative">
+            <label for="search-activities" class="sr-only">Search activities</label>
             <input
               id="search-activities"
               type="text"
               placeholder="Search activities by description..."
+              aria-label="Search activities by description"
               class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
             />
             <svg class="absolute left-3 top-2.5 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -740,16 +861,20 @@
           </div>
 
           <!-- Date Filters -->
-          <div class="flex flex-wrap gap-2 items-center">
-            <span class="text-xs font-semibold text-gray-600 uppercase">Quick Filter:</span>
-            <button data-filter="all" class="filter-btn active px-3 py-1 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors text-xs font-medium">All</button>
-            <button data-filter="today" class="filter-btn px-3 py-1 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-xs font-medium">Today</button>
-            <button data-filter="this-week" class="filter-btn px-3 py-1 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-xs font-medium">This Week</button>
-            <button data-filter="last-week" class="filter-btn px-3 py-1 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-xs font-medium">Last Week</button>
-            <button data-filter="this-month" class="filter-btn px-3 py-1 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-xs font-medium">This Month</button>
-            <button data-filter="custom" class="filter-btn px-3 py-1 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-xs font-medium">Custom Range</button>
-            <button id="clear-filters-btn" class="px-3 py-1 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-xs font-medium">Clear All Filters</button>
-            <span id="activity-count" class="ml-auto text-xs font-semibold text-gray-600"></span>
+          <div class="overflow-x-auto -mx-3 px-3">
+            <div class="flex gap-2 items-center min-w-max pb-1">
+              <span class="text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">Quick Filter:</span>
+              <button data-filter="all" class="filter-btn active px-3 py-1.5 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors text-xs font-medium whitespace-nowrap">All</button>
+              <button data-filter="today" class="filter-btn px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-xs font-medium whitespace-nowrap">Today</button>
+              <button data-filter="this-week" class="filter-btn px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-xs font-medium whitespace-nowrap">This Week</button>
+              <button data-filter="last-week" class="filter-btn px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-xs font-medium whitespace-nowrap">Last Week</button>
+              <button data-filter="this-month" class="filter-btn px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-xs font-medium whitespace-nowrap">This Month</button>
+              <button data-filter="custom" class="filter-btn px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-xs font-medium whitespace-nowrap">Custom Range</button>
+              <button id="clear-filters-btn" class="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-xs font-medium whitespace-nowrap">Clear All</button>
+            </div>
+          </div>
+          <div class="flex justify-end">
+            <span id="activity-count" class="text-xs font-semibold text-gray-600"></span>
           </div>
 
           <!-- Custom Date Range (Hidden by default) -->
@@ -798,7 +923,7 @@
     <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
       <div class="flex justify-between items-center mb-4">
         <h3 class="text-lg font-bold text-gray-900">Change Password</h3>
-        <button id="close-password-modal" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+        <button id="close-password-modal" aria-label="Close password modal" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
       </div>
       <form id="change-password-form" class="space-y-4">
         <div>
@@ -843,7 +968,7 @@
     <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
       <div class="flex justify-between items-center mb-4">
         <h3 class="text-lg font-bold text-gray-900">Export Activities</h3>
-        <button onclick="document.getElementById('export-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+        <button onclick="document.getElementById('export-modal').classList.add('hidden')" aria-label="Close export modal" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
       </div>
       <div class="space-y-4">
         <div>
@@ -859,16 +984,16 @@
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-medium text-gray-700 mb-1">From Date</label>
-            <input type="date" id="export-start" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+            <label for="export-start" class="block text-xs font-medium text-gray-700 mb-1">From Date</label>
+            <input type="date" id="export-start" aria-label="Export from date" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
           </div>
           <div>
-            <label class="block text-xs font-medium text-gray-700 mb-1">To Date</label>
-            <input type="date" id="export-end" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+            <label for="export-end" class="block text-xs font-medium text-gray-700 mb-1">To Date</label>
+            <input type="date" id="export-end" aria-label="Export to date" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
           </div>
         </div>
-        <label class="flex items-center gap-2 text-sm">
-          <input type="checkbox" id="export-use-filters" checked /> Use current filters
+        <label class="flex items-center gap-2 text-sm cursor-pointer">
+          <input type="checkbox" id="export-use-filters" aria-label="Use current filters" checked /> Use current filters
         </label>
         <button id="export-go-btn" class="w-full py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm">Download</button>
       </div>
@@ -1376,6 +1501,7 @@
       // Show admin link if user is admin
       if (currentUser.role === 'admin') {
         document.getElementById('admin-link').classList.remove('hidden');
+        document.getElementById('admin-link-mobile').classList.remove('hidden');
       }
 
       // Update activities section title based on visibility scope
@@ -1410,7 +1536,7 @@
     document.getElementById('login-form').addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      const email = document.getElementById('email').value;
+      const email = document.getElementById('email').value.trim().toLowerCase();
       const password = document.getElementById('password').value;
       const errorDiv = document.getElementById('login-error');
       const buttonText = document.getElementById('login-button-text');
@@ -1501,6 +1627,44 @@
       localStorage.removeItem('vif-token');
       showLogin();
       showNotification('Logged out successfully', 'success');
+    });
+
+    // Mobile menu handlers
+    const mobileMenuBtn = document.getElementById('mobile-menu-button');
+    const mobileMenuOverlay = document.getElementById('mobile-menu-overlay');
+    const mobileMenuPanel = document.getElementById('mobile-menu-panel');
+    const mobileMenuClose = document.getElementById('mobile-menu-close');
+
+    function openMobileMenu() {
+      mobileMenuOverlay.classList.add('active');
+      mobileMenuPanel.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeMobileMenu() {
+      mobileMenuOverlay.classList.remove('active');
+      mobileMenuPanel.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    mobileMenuBtn.addEventListener('click', openMobileMenu);
+    mobileMenuOverlay.addEventListener('click', closeMobileMenu);
+    mobileMenuClose.addEventListener('click', closeMobileMenu);
+
+    // Mobile logout
+    document.getElementById('logout-button-mobile').addEventListener('click', () => {
+      closeMobileMenu();
+      localStorage.removeItem('vif-user');
+      localStorage.removeItem('vif-token');
+      showLogin();
+      showNotification('Logged out successfully', 'success');
+    });
+
+    // Mobile change password
+    document.getElementById('change-password-button-mobile').addEventListener('click', () => {
+      closeMobileMenu();
+      document.getElementById('change-password-modal').classList.remove('hidden');
+      document.getElementById('change-password-form').reset();
+      document.getElementById('password-error').classList.add('hidden');
     });
 
     // Change Password modal handlers
