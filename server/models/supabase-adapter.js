@@ -66,12 +66,14 @@ class SupabaseAdapter {
       .from('activity_types')
       .select('*')
       .eq('name', name)
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error('Error fetching activity type:', error);
       return null;
     }
+
+    if (!data) return null;
 
     this.activityTypeCache.set(name, data);
     return data;
