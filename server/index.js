@@ -26,7 +26,6 @@ const departmentRoutes = require('./routes/departments');
 const activityTypeRoutes = require('./routes/activity-types');
 const analyticsRoutes = require('./routes/analytics');
 const reportsRoutes = require('./routes/reports');
-const templateRoutes = require('./routes/templates');
 const notificationRoutes = require('./routes/notifications');
 const benchmarkRoutes = require('./routes/benchmarks');
 
@@ -95,7 +94,6 @@ app.use('/api/departments', departmentRoutes);
 app.use('/api/activity-types', activityTypeRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/reports', reportsRoutes);
-app.use('/api/templates', templateRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/benchmarks', benchmarkRoutes);
 

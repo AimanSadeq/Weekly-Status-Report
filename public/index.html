@@ -565,14 +565,6 @@
             </h2>
             <p class="text-xs text-gray-600 mt-0.5">Select a date first, then add multiple activities for that date</p>
           </div>
-          <!-- Template selector -->
-          <div class="flex gap-2 items-center">
-            <select id="template-select" class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm">
-              <option value="">Use Template...</option>
-            </select>
-            <button type="button" id="use-template-btn" class="px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-xs font-medium">Use</button>
-            <button type="button" id="manage-templates-btn" class="px-3 py-1.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-xs font-medium">Manage</button>
-          </div>
         </div>
 
         <!-- Add Activity Form -->
@@ -666,10 +658,6 @@
           </div>
 
           <div class="flex justify-end gap-2">
-            <button type="button" id="save-template-btn"
-              class="px-4 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium text-sm">
-              Save as Template
-            </button>
             <button
               type="submit"
               class="px-4 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium flex items-center text-sm"
@@ -887,19 +875,6 @@
           <input type="checkbox" id="export-use-filters" checked /> Use current filters
         </label>
         <button id="export-go-btn" class="w-full py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm">Download</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Template Management Modal -->
-  <div id="template-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center px-4">
-    <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 max-h-[80vh] overflow-y-auto">
-      <div class="flex justify-between items-center mb-4">
-        <h3 class="text-lg font-bold text-gray-900">Manage Templates</h3>
-        <button onclick="document.getElementById('template-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
-      </div>
-      <div id="template-list" class="space-y-2">
-        <p class="text-gray-500 text-sm">Loading templates...</p>
       </div>
     </div>
   </div>
@@ -2662,97 +2637,6 @@
       }
     }
 
-    // --- Templates ---
-    let templates = [];
-
-    async function loadTemplates() {
-      try {
-        const response = await authFetch('/api/templates');
-        const data = await response.json();
-        if (data.success) {
-          templates = data.templates || [];
-          populateTemplateDropdown();
-        }
-      } catch (e) { console.error('Template load error:', e); }
-    }
-
-    function populateTemplateDropdown() {
-      const sel = document.getElementById('template-select');
-      if (!sel) return;
-      sel.innerHTML = '<option value="">Use Template...</option>' +
-        templates.map(t => `<option value="${escapeHtml(t.id)}">${escapeHtml(t.name)}</option>`).join('');
-    }
-
-    document.getElementById('use-template-btn')?.addEventListener('click', () => {
-      const sel = document.getElementById('template-select');
-      const tpl = templates.find(t => t.id === sel?.value);
-      if (!tpl) return showNotification('Select a template first', 'error');
-      if (tpl.department_name) document.getElementById('department').value = tpl.department_name;
-      if (tpl.activity_type_text) document.getElementById('activity-type').value = tpl.activity_type_text;
-      if (tpl.description) document.getElementById('description').value = tpl.description;
-      if (tpl.units_completed) document.getElementById('units').value = tpl.units_completed;
-      showNotification('Template applied!');
-      // Record usage
-      authFetch(`/api/templates/${tpl.id}/use`, { method: 'POST' }).catch(() => {});
-    });
-
-    document.getElementById('save-template-btn')?.addEventListener('click', async () => {
-      const name = prompt('Template name:');
-      if (!name) return;
-      try {
-        const response = await authFetch('/api/templates', {
-          method: 'POST',
-          body: JSON.stringify({
-            name,
-            departmentName: document.getElementById('department').value,
-            activityTypeText: document.getElementById('activity-type').value,
-            description: document.getElementById('description').value,
-            unitsCompleted: parseInt(document.getElementById('units').value) || null,
-            isShared: false
-          })
-        });
-        const data = await response.json();
-        if (data.success) {
-          showNotification('Template saved!');
-          loadTemplates();
-        } else {
-          showNotification(data.error || 'Failed to save template', 'error');
-        }
-      } catch (e) { showNotification('Failed to save template', 'error'); }
-    });
-
-    document.getElementById('manage-templates-btn')?.addEventListener('click', async () => {
-      document.getElementById('template-modal').classList.remove('hidden');
-      await loadTemplates();
-      renderTemplateList();
-    });
-
-    function renderTemplateList() {
-      const container = document.getElementById('template-list');
-      if (templates.length === 0) {
-        container.innerHTML = '<p class="text-gray-500 text-sm">No templates yet. Save one from the activity form!</p>';
-        return;
-      }
-      container.innerHTML = templates.map(t => `
-        <div class="p-3 border border-gray-200 rounded-lg flex justify-between items-center">
-          <div>
-            <div class="font-semibold text-sm text-gray-900">${escapeHtml(t.name)}</div>
-            <div class="text-xs text-gray-500">${escapeHtml(t.department_name || '')} • ${escapeHtml(t.activity_type_text || '')}${t.usage_count ? ` • Used ${t.usage_count}x` : ''}</div>
-          </div>
-          <button class="text-red-500 hover:text-red-700 text-sm font-bold" onclick="deleteTemplate('${escapeHtml(t.id)}')">Delete</button>
-        </div>
-      `).join('');
-    }
-
-    window.deleteTemplate = async function(id) {
-      try {
-        await authFetch(`/api/templates/${id}`, { method: 'DELETE' });
-        showNotification('Template deleted');
-        await loadTemplates();
-        renderTemplateList();
-      } catch (e) { showNotification('Failed to delete template', 'error'); }
-    };
-
     // --- Bulk Operations ---
     let selectedIds = new Set();
 
@@ -2944,7 +2828,6 @@
         // Close any open modal
         document.getElementById('change-password-modal')?.classList.add('hidden');
         document.getElementById('export-modal')?.classList.add('hidden');
-        document.getElementById('template-modal')?.classList.add('hidden');
         document.getElementById('bulk-confirm-modal')?.classList.add('hidden');
         document.getElementById('shortcuts-help')?.classList.add('hidden');
         document.getElementById('notif-dropdown')?.classList.remove('active');
@@ -2974,7 +2857,6 @@
       // Init new features after dashboard is shown
       setTimeout(() => {
         loadDashboardSummary();
-        loadTemplates();
         startNotifPolling();
         updateWeeklyBadge();
       }, 200);
