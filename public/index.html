@@ -1526,19 +1526,14 @@
 
     async function populateFilterDropdowns() {
       try {
-        // Fetch activity types from API with department associations
-        const activityTypesResponse = await fetch('/api/activity-types');
-        const activityTypesData = await activityTypesResponse.json();
-        if (activityTypesData.success) {
-          allActivityTypes = activityTypesData.activityTypes.filter(at => at.is_active);
-        }
+        // Derive filter options from the activities array, which is already
+        // scoped by the backend based on the user's visibility (self/department/all).
+        // This ensures department and consultant filters only show what the user can access.
 
-        // Fetch departments from API
-        const departmentsResponse = await fetch('/api/departments');
-        const departmentsData = await departmentsResponse.json();
-        if (departmentsData.success) {
-          allDepartments = departmentsData.departments.filter(d => d.is_active);
-        }
+        // Extract unique departments from visible activities
+        allDepartments = [...new Set(activities.map(a => a.department).filter(Boolean))]
+          .sort()
+          .map(name => ({ name }));
 
         // Initial population of all dropdowns
         updateDepartmentFilter();
