@@ -531,7 +531,7 @@
           </div>
         </div>
         <div id="dashboard-summary-body">
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-3 rounded-lg text-center">
               <div class="text-blue-600 text-xs font-medium">Total Activities</div>
               <div id="sum-total" class="text-2xl font-bold text-blue-900">-</div>
@@ -548,10 +548,6 @@
               <div class="text-orange-600 text-xs font-medium">Activity Types</div>
               <div id="sum-types" class="text-2xl font-bold text-orange-900">-</div>
             </div>
-          </div>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div style="max-height:220px;"><canvas id="summary-type-chart"></canvas></div>
-            <div style="max-height:220px;"><canvas id="summary-trend-chart"></canvas></div>
           </div>
         </div>
       </div>
@@ -2455,9 +2451,6 @@
     // ============================================
 
     // --- Dashboard Summary ---
-    let summaryTypeChart = null;
-    let summaryTrendChart = null;
-
     async function loadDashboardSummary() {
       try {
         const period = document.getElementById('summary-period')?.value || 'this-month';
@@ -2486,38 +2479,6 @@
         document.getElementById('sum-units').textContent = s.totalUnits || 0;
         document.getElementById('sum-depts').textContent = Object.keys(s.byDepartment || {}).length;
         document.getElementById('sum-types').textContent = Object.keys(s.byType || {}).length;
-
-        // Activity Type doughnut chart
-        const typeData = s.byType || {};
-        const typeLabels = Object.keys(typeData);
-        const typeValues = typeLabels.map(k => typeData[k]?.count || 0);
-        if (summaryTypeChart) summaryTypeChart.destroy();
-        const ctx1 = document.getElementById('summary-type-chart');
-        if (ctx1 && typeLabels.length > 0) {
-          summaryTypeChart = new Chart(ctx1.getContext('2d'), {
-            type: 'doughnut',
-            data: {
-              labels: typeLabels,
-              datasets: [{ data: typeValues, backgroundColor: ['#356daa','#5391D5','#84aed9','#b3cce8','#10b981','#f59e0b','#ef4444','#8b5cf6'] }]
-            },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { font: { size: 10 } } } } }
-          });
-        }
-
-        // Weekly trend line chart
-        const trendData = s.weeklyTrend || [];
-        if (summaryTrendChart) summaryTrendChart.destroy();
-        const ctx2 = document.getElementById('summary-trend-chart');
-        if (ctx2 && trendData.length > 0) {
-          summaryTrendChart = new Chart(ctx2.getContext('2d'), {
-            type: 'line',
-            data: {
-              labels: trendData.map(t => t.week || t.date || ''),
-              datasets: [{ label: 'Activities', data: trendData.map(t => t.count || 0), borderColor: '#5391D5', backgroundColor: 'rgba(83,145,213,0.1)', fill: true, tension: 0.3 }]
-            },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
-          });
-        }
       } catch (e) {
         console.error('Dashboard summary error:', e);
       }
