@@ -861,9 +861,18 @@
       }
     }
 
+    function isAnyFilterActive() {
+      return searchQuery
+        || currentFilter !== 'all'
+        || document.getElementById('filter-week')?.value
+        || document.getElementById('filter-department')?.value
+        || document.getElementById('filter-consultant')?.value
+        || document.getElementById('filter-activity-type')?.value;
+    }
+
     function renderActivities() {
       const container = document.getElementById('activities-container');
-      const displayActivities = filteredActivities.length > 0 || searchQuery || currentFilter !== 'all' ? filteredActivities : activities;
+      const displayActivities = isAnyFilterActive() ? filteredActivities : activities;
 
       // Update activity count
       document.getElementById('activity-count').textContent = `${displayActivities.length} ${displayActivities.length === 1 ? 'activity' : 'activities'}`;
@@ -1701,7 +1710,9 @@
       if (filterWeek) {
         const weekNum = parseInt(filterWeek);
         filtered = filtered.filter(activity => {
-          const activityDate = new Date(activity.week || activity.activityDate);
+          const dateStr = activity.week || activity.activityDate;
+          if (!dateStr) return false;
+          const activityDate = new Date(dateStr + 'T00:00:00');
           const activityWeekNum = getWeekNumber(activityDate);
           return activityWeekNum === weekNum;
         });
@@ -1917,12 +1928,14 @@
       document.getElementById('filter-activity-type').addEventListener('change', applyFilters);
       document.getElementById('filter-department').addEventListener('change', onDepartmentFilterChange);
       document.getElementById('filter-consultant').addEventListener('change', onConsultantFilterChange);
-      document.getElementById('filter-week').addEventListener('input', (e) => {
+      const weekFilterHandler = () => {
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(() => {
           applyFilters();
         }, 300);
-      });
+      };
+      document.getElementById('filter-week').addEventListener('input', weekFilterHandler);
+      document.getElementById('filter-week').addEventListener('change', weekFilterHandler);
 
       // Clear filters button handler
       document.getElementById('clear-filters-btn').addEventListener('click', resetFilters);
