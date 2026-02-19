@@ -2,11 +2,14 @@ const express = require('express');
 const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
 const db = require('../models/db');
+const { requireAuth, requireAdmin } = require('../middleware/auth');
+const { sendFeedbackNotification } = require('./email');
 
 // Get all activities (admin) or user's activities (employee)
-router.get('/', async (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
   try {
-    const { email, role, visibilityScope, week, status, department } = req.query;
+    const { week, status, department } = req.query;
+    const { email, role, visibilityScope } = req.user;
 
     let activities;
 
@@ -41,7 +44,7 @@ router.get('/', async (req, res) => {
 });
 
 // Get single activity
-router.get('/:id', async (req, res) => {
+router.get('/:id', requireAuth, async (req, res) => {
   try {
     const activity = await db.getActivity(req.params.id);
     
@@ -58,11 +61,12 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create new activity
-router.post('/', async (req, res) => {
+router.post('/', requireAuth, async (req, res) => {
   try {
     const activityData = {
       id: uuidv4(),
       ...req.body,
+      email: req.user.email,
       status: 'draft',
       createdAt: new Date().toISOString()
     };
@@ -77,7 +81,7 @@ router.post('/', async (req, res) => {
 });
 
 // Update activity
-router.put('/:id', async (req, res) => {
+router.put('/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
@@ -97,7 +101,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // Delete activity
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const deleted = await db.deleteActivity(id);
@@ -115,12 +119,13 @@ router.delete('/:id', async (req, res) => {
 });
 
 // Submit week (bulk update status)
-router.post('/submit-week', async (req, res) => {
+router.post('/submit-week', requireAuth, async (req, res) => {
   try {
-    const { email, week } = req.body;
+    const { week } = req.body;
+    const email = req.user.email;
 
-    if (!email || !week) {
-      return res.status(400).json({ error: 'Email and week required' });
+    if (!week) {
+      return res.status(400).json({ error: 'Week required' });
     }
 
     // Get user's draft activities for the week
@@ -152,7 +157,7 @@ router.post('/submit-week', async (req, res) => {
 });
 
 // Admin review activity
-router.post('/:id/review', async (req, res) => {
+router.post('/:id/review', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { adminFeedback, adminName } = req.body;
@@ -171,18 +176,11 @@ router.post('/:id/review', async (req, res) => {
     // Send email notification to employee (fire and forget)
     const user = await db.getUser(activity.email);
     if (user) {
-      const emailData = {
+      sendFeedbackNotification({
         email: user.email,
         name: user.name,
         activityName: activity.activity || activity.activityType || 'Your Activity',
         feedback: adminFeedback
-      };
-
-      // Send email asynchronously (don't wait for it)
-      fetch('http://localhost:3000/api/email/feedback-notification', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(emailData)
       }).catch(err => console.log('Email notification failed:', err.message));
     }
 
@@ -195,7 +193,7 @@ router.post('/:id/review', async (req, res) => {
 });
 
 // Mark feedback as read
-router.post('/:id/mark-read', async (req, res) => {
+router.post('/:id/mark-read', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -216,7 +214,7 @@ router.post('/:id/mark-read', async (req, res) => {
 });
 
 // Get statistics
-router.get('/stats/summary', async (req, res) => {
+router.get('/stats/summary', requireAuth, async (req, res) => {
   try {
     const stats = await db.getStats();
     res.json({ success: true, stats });

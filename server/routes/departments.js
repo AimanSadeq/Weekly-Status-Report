@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { requireAuth, requireAdmin } = require('../middleware/auth');
 
 // Check if Supabase is configured
 const HAS_SUPABASE = process.env.SUPABASE_URL && process.env.SUPABASE_KEY;
@@ -13,7 +14,7 @@ if (HAS_SUPABASE) {
 // ==================== DEPARTMENT MANAGEMENT ====================
 
 // Get all departments (with optional stats)
-router.get('/', async (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
   try {
     const { includeStats, includeInactive } = req.query;
 
@@ -92,7 +93,7 @@ router.get('/', async (req, res) => {
 });
 
 // Get single department by ID
-router.get('/:id', async (req, res) => {
+router.get('/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -139,7 +140,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create new department
-router.post('/', async (req, res) => {
+router.post('/', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { name, description } = req.body;
 
@@ -190,7 +191,7 @@ router.post('/', async (req, res) => {
 });
 
 // Update department
-router.put('/:id', async (req, res) => {
+router.put('/:id', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { name, description, isActive } = req.body;
@@ -235,7 +236,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // Delete department (soft delete - set is_active to false)
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { hardDelete } = req.query;
@@ -294,7 +295,7 @@ router.delete('/:id', async (req, res) => {
 });
 
 // Get department performance metrics
-router.get('/:id/metrics', async (req, res) => {
+router.get('/:id/metrics', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const { startDate, endDate } = req.query;
@@ -383,7 +384,7 @@ router.get('/:id/metrics', async (req, res) => {
 });
 
 // Get department employees
-router.get('/:id/employees', async (req, res) => {
+router.get('/:id/employees', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
 

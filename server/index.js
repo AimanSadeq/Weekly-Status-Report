@@ -7,6 +7,12 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 require('dotenv').config();
 
+// Fail fast if JWT_SECRET is not set
+if (!process.env.JWT_SECRET) {
+  console.error('FATAL: JWT_SECRET environment variable is not set. Exiting.');
+  process.exit(1);
+}
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -48,7 +54,10 @@ app.use(helmet({
   }
 }));
 app.use(compression());
-app.use(cors());
+app.use(cors({
+  origin: process.env.APP_URL || '*',
+  credentials: true
+}));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
@@ -58,6 +67,14 @@ const limiter = rateLimit({
   max: 100 // limit each IP to 100 requests per windowMs
 });
 app.use('/api/', limiter);
+
+// Login-specific rate limiter (5 requests per minute)
+const loginLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 5,
+  message: { error: 'Too many login attempts. Please try again in a minute.' }
+});
+app.use('/api/auth/login', loginLimiter);
 
 // Serve static files
 app.use(express.static('public'));

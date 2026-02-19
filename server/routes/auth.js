@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const db = require('../models/db');
+const { generateToken, requireAuth } = require('../middleware/auth');
 
 const SALT_ROUNDS = 10;
 
@@ -42,9 +43,13 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid password' });
     }
 
+    // Generate JWT token
+    const token = generateToken(user);
+
     // Return user data (exclude passwordHash)
     res.json({
       success: true,
+      token,
       user: {
         email: user.email,
         name: user.name,
@@ -61,12 +66,13 @@ router.post('/login', async (req, res) => {
 });
 
 // Change password
-router.post('/change-password', async (req, res) => {
+router.post('/change-password', requireAuth, async (req, res) => {
   try {
-    const { email, currentPassword, newPassword } = req.body;
+    const { currentPassword, newPassword } = req.body;
+    const email = req.user.email;
 
-    if (!email || !currentPassword || !newPassword) {
-      return res.status(400).json({ error: 'Email, current password, and new password are required' });
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Current password and new password are required' });
     }
 
     if (newPassword.length < 8) {
@@ -107,15 +113,9 @@ router.post('/logout', (req, res) => {
 });
 
 // Check if user is authenticated (for frontend)
-router.get('/check', async (req, res) => {
-  const { email } = req.query;
-  
-  if (!email) {
-    return res.status(400).json({ error: 'Email required' });
-  }
-
+router.get('/check', requireAuth, async (req, res) => {
   try {
-    const user = await db.getUser(email);
+    const user = await db.getUser(req.user.email);
     if (user) {
       const { passwordHash, ...safeUser } = user;
       res.json({ authenticated: true, user: safeUser });

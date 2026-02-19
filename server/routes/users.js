@@ -2,8 +2,9 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const db = require('../models/db');
+const { requireAuth, requireAdmin } = require('../middleware/auth');
 
-const DEFAULT_PASSWORD = 'Vifm2025!';
+const DEFAULT_PASSWORD = process.env.DEFAULT_PASSWORD || 'Vifm2025!';
 const SALT_ROUNDS = 10;
 
 // Check if Supabase is configured
@@ -16,10 +17,11 @@ if (HAS_SUPABASE) {
 }
 
 // Get all users (admin only)
-router.get('/', async (req, res) => {
+router.get('/', requireAuth, requireAdmin, async (req, res) => {
   try {
     const users = await db.getAllUsers();
-    res.json({ success: true, users });
+    const safeUsers = users.map(({ passwordHash, ...u }) => u);
+    res.json({ success: true, users: safeUsers });
   } catch (error) {
     console.error('Get users error:', error);
     res.status(500).json({ error: 'Failed to fetch users' });
@@ -29,7 +31,7 @@ router.get('/', async (req, res) => {
 // ==================== EMPLOYEE MANAGEMENT ====================
 
 // GET /api/users/employees — list all employees with department associations
-router.get('/employees', async (req, res) => {
+router.get('/employees', requireAuth, requireAdmin, async (req, res) => {
   try {
     if (HAS_SUPABASE) {
       const { data: employees, error } = await supabase
@@ -94,7 +96,7 @@ router.get('/employees', async (req, res) => {
 });
 
 // POST /api/users/employees — create employee with department assignments
-router.post('/employees', async (req, res) => {
+router.post('/employees', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { name, email, role, visibilityScope, departments: deptAssignments } = req.body;
 
@@ -167,7 +169,7 @@ router.post('/employees', async (req, res) => {
 });
 
 // PUT /api/users/employees/:id — update employee and department links
-router.put('/employees/:id', async (req, res) => {
+router.put('/employees/:id', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { name, email, role, visibilityScope, departments: deptAssignments } = req.body;
@@ -244,7 +246,7 @@ router.put('/employees/:id', async (req, res) => {
 });
 
 // DELETE /api/users/employees/:id — soft-delete employee
-router.delete('/employees/:id', async (req, res) => {
+router.delete('/employees/:id', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -279,7 +281,7 @@ router.delete('/employees/:id', async (req, res) => {
 // ==================== EXISTING USER ROUTES ====================
 
 // Get single user
-router.get('/:email', async (req, res) => {
+router.get('/:email', requireAuth, async (req, res) => {
   try {
     const user = await db.getUser(req.params.email);
 
@@ -287,7 +289,8 @@ router.get('/:email', async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    res.json({ success: true, user });
+    const { passwordHash, ...safeUser } = user;
+    res.json({ success: true, user: safeUser });
   } catch (error) {
     console.error('Get user error:', error);
     res.status(500).json({ error: 'Failed to fetch user' });
@@ -295,7 +298,7 @@ router.get('/:email', async (req, res) => {
 });
 
 // Create user (admin only)
-router.post('/', async (req, res) => {
+router.post('/', requireAuth, requireAdmin, async (req, res) => {
   try {
     const userData = {
       ...req.body,
@@ -311,7 +314,7 @@ router.post('/', async (req, res) => {
 });
 
 // Update user
-router.put('/:email', async (req, res) => {
+router.put('/:email', requireAuth, requireAdmin, async (req, res) => {
   try {
     const user = await db.updateUser(req.params.email, req.body);
 
@@ -327,7 +330,7 @@ router.put('/:email', async (req, res) => {
 });
 
 // Get user's email preferences
-router.get('/:email/email-preferences', async (req, res) => {
+router.get('/:email/email-preferences', requireAuth, async (req, res) => {
   try {
     const preferences = await db.getEmailPreferences(req.params.email);
     res.json({ success: true, preferences });
@@ -338,7 +341,7 @@ router.get('/:email/email-preferences', async (req, res) => {
 });
 
 // Update user's email preferences
-router.put('/:email/email-preferences', async (req, res) => {
+router.put('/:email/email-preferences', requireAuth, async (req, res) => {
   try {
     const preferences = await db.updateEmailPreferences(
       req.params.email,

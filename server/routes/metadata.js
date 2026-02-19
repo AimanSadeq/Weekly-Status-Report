@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { requireAuth } = require('../middleware/auth');
 
 // Check if Supabase is configured
 const HAS_SUPABASE = process.env.SUPABASE_URL && process.env.SUPABASE_KEY;
@@ -11,7 +12,7 @@ if (HAS_SUPABASE) {
 }
 
 // Get activity types for a specific department
-router.get('/activity-types', async (req, res) => {
+router.get('/activity-types', requireAuth, async (req, res) => {
   try {
     const { department } = req.query;
 
@@ -103,7 +104,7 @@ router.get('/activity-types', async (req, res) => {
 });
 
 // Get all departments
-router.get('/departments', async (req, res) => {
+router.get('/departments', requireAuth, async (req, res) => {
   try {
     if (HAS_SUPABASE) {
       const { data, error } = await supabase
@@ -146,9 +147,9 @@ router.get('/departments', async (req, res) => {
 });
 
 // Get metadata (both activity types and departments in one call)
-router.get('/all', async (req, res) => {
+router.get('/all', requireAuth, async (req, res) => {
   try {
-    const { email } = req.query;
+    const email = req.user.email;
 
     if (HAS_SUPABASE) {
       let departmentsResult;

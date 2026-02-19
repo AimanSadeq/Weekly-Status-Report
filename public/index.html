@@ -681,6 +681,7 @@
     <span class="font-semibold text-sm">You're offline - Changes will sync when reconnected</span>
   </div>
 
+  <script src="/auth-helpers.js"></script>
   <script>
     // Global state
     let currentUser = null;
@@ -805,12 +806,7 @@
     // Load activity types and departments from API
     async function loadMetadata() {
       try {
-        // Pass the current user's email to get only their assigned departments
-        const url = currentUser && currentUser.email
-          ? `/api/metadata/all?email=${encodeURIComponent(currentUser.email)}`
-          : '/api/metadata/all';
-
-        const response = await fetch(url);
+        const response = await authFetch('/api/metadata/all');
         const data = await response.json();
 
         if (data.success) {
@@ -948,14 +944,14 @@
           <div class="activity-item bg-white border-b border-gray-200 hover:bg-gray-50 transition-colors desktop-view">
             <div class="flex items-center gap-3 px-3 py-2 text-sm">
               <span class="text-gray-600 w-24">${date !== 'No Date' ? new Date(date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'No Date'}</span>
-              <span class="text-gray-600 w-32">${activity.name || currentUser?.name || ''}</span>
-              <span class="text-gray-600 w-32">${activity.department}</span>
-              <span class="font-semibold text-gray-900 flex-1">${activity.title || activity.activityType}</span>
-              ${hasUnits ? `<span class="text-blue-700 font-semibold w-20">${units} units</span>` : '<span class="w-20"></span>'}
-              ${activity.description ? `<span class="text-gray-600 truncate flex-1" title="${activity.description}">${activity.description}</span>` : '<span class="flex-1"></span>'}
+              <span class="text-gray-600 w-32">${escapeHtml(activity.name || currentUser?.name || '')}</span>
+              <span class="text-gray-600 w-32">${escapeHtml(activity.department)}</span>
+              <span class="font-semibold text-gray-900 flex-1">${escapeHtml(activity.title || activity.activityType)}</span>
+              ${hasUnits ? `<span class="text-blue-700 font-semibold w-20">${escapeHtml(String(units))} units</span>` : '<span class="w-20"></span>'}
+              ${activity.description ? `<span class="text-gray-600 truncate flex-1" title="${escapeHtml(activity.description)}">${escapeHtml(activity.description)}</span>` : '<span class="flex-1"></span>'}
               <div class="flex gap-2 w-32">
-                <button data-action="edit" data-activity-id="${activity.id}" class="edit-btn text-indigo-600 hover:text-indigo-800 font-semibold px-2 py-1 rounded hover:bg-indigo-50 transition-colors text-xs">Edit</button>
-                <button data-action="delete" data-activity-id="${activity.id}" class="delete-btn text-red-600 hover:text-red-800 font-semibold px-2 py-1 rounded hover:bg-red-50 transition-colors text-xs">Delete</button>
+                <button data-action="edit" data-activity-id="${escapeHtml(activity.id)}" class="edit-btn text-indigo-600 hover:text-indigo-800 font-semibold px-2 py-1 rounded hover:bg-indigo-50 transition-colors text-xs">Edit</button>
+                <button data-action="delete" data-activity-id="${escapeHtml(activity.id)}" class="delete-btn text-red-600 hover:text-red-800 font-semibold px-2 py-1 rounded hover:bg-red-50 transition-colors text-xs">Delete</button>
               </div>
             </div>
           </div>
@@ -971,29 +967,29 @@
               </div>
               <div class="mobile-card-row border-b border-gray-100">
                 <span class="mobile-card-label">Employee</span>
-                <span class="mobile-card-value">${activity.name || currentUser?.name || ''}</span>
+                <span class="mobile-card-value">${escapeHtml(activity.name || currentUser?.name || '')}</span>
               </div>
               <div class="mobile-card-row border-b border-gray-100">
                 <span class="mobile-card-label">Department</span>
-                <span class="mobile-card-value">${activity.department}</span>
+                <span class="mobile-card-value">${escapeHtml(activity.department)}</span>
               </div>
               <div class="mobile-card-row border-b border-gray-100">
                 <span class="mobile-card-label">Activity</span>
-                <span class="mobile-card-value font-semibold text-gray-900">${activity.title || activity.activityType}</span>
+                <span class="mobile-card-value font-semibold text-gray-900">${escapeHtml(activity.title || activity.activityType)}</span>
               </div>
               ${hasUnits ? `
               <div class="mobile-card-row border-b border-gray-100">
                 <span class="mobile-card-label">Units</span>
-                <span class="mobile-card-value text-blue-700 font-semibold">${units} units</span>
+                <span class="mobile-card-value text-blue-700 font-semibold">${escapeHtml(String(units))} units</span>
               </div>` : ''}
               ${activity.description ? `
               <div class="mobile-card-row border-b border-gray-100">
                 <span class="mobile-card-label">Description</span>
-                <span class="mobile-card-value text-gray-600">${activity.description}</span>
+                <span class="mobile-card-value text-gray-600">${escapeHtml(activity.description)}</span>
               </div>` : ''}
               <div class="flex gap-2 mt-3 justify-end">
-                <button data-action="edit" data-activity-id="${activity.id}" class="edit-btn text-indigo-600 hover:text-indigo-800 font-semibold px-3 py-1.5 rounded bg-indigo-50 transition-colors text-sm flex-1">Edit</button>
-                <button data-action="delete" data-activity-id="${activity.id}" class="delete-btn text-red-600 hover:text-red-800 font-semibold px-3 py-1.5 rounded bg-red-50 transition-colors text-sm flex-1">Delete</button>
+                <button data-action="edit" data-activity-id="${escapeHtml(activity.id)}" class="edit-btn text-indigo-600 hover:text-indigo-800 font-semibold px-3 py-1.5 rounded bg-indigo-50 transition-colors text-sm flex-1">Edit</button>
+                <button data-action="delete" data-activity-id="${escapeHtml(activity.id)}" class="delete-btn text-red-600 hover:text-red-800 font-semibold px-3 py-1.5 rounded bg-red-50 transition-colors text-sm flex-1">Delete</button>
               </div>
             </div>
           </div>
@@ -1041,13 +1037,7 @@
       if (!currentUser) return;
 
       try {
-        const params = new URLSearchParams({
-          email: currentUser.email,
-          role: currentUser.role,
-          visibilityScope: currentUser.visibilityScope || 'self'
-        });
-
-        const response = await fetch(`/api/activities?${params}`);
+        const response = await authFetch('/api/activities');
 
         if (!response.ok) {
           throw new Error('Failed to fetch activities');
@@ -1077,8 +1067,6 @@
     async function addActivity(formData) {
       try {
         const activityData = {
-          email: currentUser.email,
-          role: currentUser.role,
           activityType: formData.activityType,
           department: formData.department,
           units: parseInt(formData.units),
@@ -1090,11 +1078,8 @@
           createdAt: new Date().toISOString()
         };
 
-        const response = await fetch('/api/activities', {
+        const response = await authFetch('/api/activities', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
           body: JSON.stringify(activityData)
         });
 
@@ -1208,6 +1193,11 @@
           throw new Error(data.error || data.message || 'Login failed');
         }
 
+        // Store JWT token
+        if (data.token) {
+          localStorage.setItem('vif-token', data.token);
+        }
+
         // Store user data
         currentUser = {
           email: data.user.email,
@@ -1248,6 +1238,7 @@
 
     document.getElementById('logout-button').addEventListener('click', () => {
       localStorage.removeItem('vif-user');
+      localStorage.removeItem('vif-token');
       showLogin();
       showNotification('Logged out successfully', 'success');
     });
@@ -1297,11 +1288,9 @@
       spinner.classList.remove('hidden');
 
       try {
-        const response = await fetch('/api/auth/change-password', {
+        const response = await authFetch('/api/auth/change-password', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            email: currentUser.email,
             currentPassword: currentPw,
             newPassword: newPw
           })
@@ -1368,9 +1357,9 @@
         <div class="p-2 bg-gray-50 border border-gray-200 rounded hover:border-indigo-300 transition-all">
           <div class="flex justify-between items-center gap-3">
             <div class="flex items-center gap-2 flex-1 text-sm">
-              <span class="font-bold text-gray-900">${index + 1}. ${activity.activityType} • ${activity.department}</span>
-              ${hasUnits ? `<span class="text-blue-700 font-semibold">${activity.units} units</span>` : ''}
-              ${activity.description ? `<span class="text-gray-600 truncate" title="${activity.description}">${activity.description}</span>` : ''}
+              <span class="font-bold text-gray-900">${index + 1}. ${escapeHtml(activity.activityType)} • ${escapeHtml(activity.department)}</span>
+              ${hasUnits ? `<span class="text-blue-700 font-semibold">${escapeHtml(String(activity.units))} units</span>` : ''}
+              ${activity.description ? `<span class="text-gray-600 truncate" title="${escapeHtml(activity.description)}">${escapeHtml(activity.description)}</span>` : ''}
             </div>
             <button onclick="removePendingActivity(${index})" class="text-red-600 hover:text-red-800 font-bold text-lg">✕</button>
           </div>
@@ -1436,11 +1425,8 @@
       }
 
       try {
-        const response = await fetch(`/api/activities/${activityId}`, {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json'
-          }
+        const response = await authFetch(`/api/activities/${activityId}`, {
+          method: 'DELETE'
         });
 
         if (response.ok) {
@@ -1483,13 +1469,9 @@
       try {
         if (isEditing) {
           // Update existing activity
-          const response = await fetch(`/api/activities/${editingActivityId}`, {
+          const response = await authFetch(`/api/activities/${editingActivityId}`, {
             method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json'
-            },
             body: JSON.stringify({
-              email: currentUser.email,
               ...formData,
               week: formData.date
             })
@@ -1853,14 +1835,16 @@
     // Check for existing user on page load
     window.addEventListener('DOMContentLoaded', () => {
       const storedUser = localStorage.getItem('vif-user');
+      const storedToken = localStorage.getItem('vif-token');
 
-      if (storedUser) {
+      if (storedUser && storedToken) {
         try {
           currentUser = JSON.parse(storedUser);
           showDashboard();
         } catch (error) {
           console.error('Error parsing stored user:', error);
           localStorage.removeItem('vif-user');
+          localStorage.removeItem('vif-token');
         }
       }
 

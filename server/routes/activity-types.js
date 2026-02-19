@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { requireAuth, requireAdmin } = require('../middleware/auth');
 
 // Check if Supabase is configured
 const HAS_SUPABASE = process.env.SUPABASE_URL && process.env.SUPABASE_KEY;
@@ -13,7 +14,7 @@ if (HAS_SUPABASE) {
 // ==================== ACTIVITY TYPE MANAGEMENT ====================
 
 // Get all activity types (with optional stats and filters)
-router.get('/', async (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
   try {
     const { includeStats, includeInactive, category } = req.query;
 
@@ -114,7 +115,7 @@ router.get('/', async (req, res) => {
 });
 
 // Get single activity type by ID
-router.get('/:id', async (req, res) => {
+router.get('/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -155,7 +156,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create new activity type
-router.post('/', async (req, res) => {
+router.post('/', requireAuth, requireAdmin, async (req, res) => {
   try {
     const {
       name,
@@ -248,7 +249,7 @@ router.post('/', async (req, res) => {
 });
 
 // Update activity type
-router.put('/:id', async (req, res) => {
+router.put('/:id', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const {
@@ -323,7 +324,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // Delete activity type (soft delete - set is_active to false)
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { hardDelete } = req.query;
@@ -388,7 +389,7 @@ router.delete('/:id', async (req, res) => {
 });
 
 // Get activity type analytics
-router.get('/:id/analytics', async (req, res) => {
+router.get('/:id/analytics', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const { startDate, endDate } = req.query;
@@ -489,7 +490,7 @@ router.get('/:id/analytics', async (req, res) => {
 });
 
 // Reorder activity types (batch update display_order)
-router.post('/reorder', async (req, res) => {
+router.post('/reorder', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { orderedIds } = req.body;
 

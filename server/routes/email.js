@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const sgMail = require('@sendgrid/mail');
 const db = require('../models/db');
+const { requireAuth } = require('../middleware/auth');
 
 // Initialize SendGrid
 if (process.env.SENDGRID_API_KEY) {
@@ -43,7 +44,7 @@ async function sendEmail(to, subject, html, type) {
 }
 
 // Test email endpoint
-router.post('/test', async (req, res) => {
+router.post('/test', requireAuth, async (req, res) => {
   try {
     const { to } = req.body;
     
@@ -70,7 +71,7 @@ router.post('/test', async (req, res) => {
 });
 
 // Send deadline reminder
-router.post('/deadline-reminder', async (req, res) => {
+router.post('/deadline-reminder', requireAuth, async (req, res) => {
   try {
     const { email, name, daysLeft, weekEnding } = req.body;
     
@@ -107,7 +108,7 @@ router.post('/deadline-reminder', async (req, res) => {
 });
 
 // Send submission confirmation
-router.post('/submission-confirmation', async (req, res) => {
+router.post('/submission-confirmation', requireAuth, async (req, res) => {
   try {
     const { email, name, activityCount, weekEnding } = req.body;
     
@@ -144,7 +145,7 @@ router.post('/submission-confirmation', async (req, res) => {
 });
 
 // Send feedback notification
-router.post('/feedback-notification', async (req, res) => {
+router.post('/feedback-notification', requireAuth, async (req, res) => {
   try {
     const { email, name, activityName, feedback } = req.body;
     
@@ -183,7 +184,7 @@ router.post('/feedback-notification', async (req, res) => {
 });
 
 // Send weekly digest
-router.post('/weekly-digest', async (req, res) => {
+router.post('/weekly-digest', requireAuth, async (req, res) => {
   try {
     const { email, name, summary } = req.body;
     
@@ -223,7 +224,7 @@ router.post('/weekly-digest', async (req, res) => {
 });
 
 // Send admin alert
-router.post('/admin-alert', async (req, res) => {
+router.post('/admin-alert', requireAuth, async (req, res) => {
   try {
     const { adminEmail, message, subject } = req.body;
 
@@ -248,4 +249,27 @@ router.post('/admin-alert', async (req, res) => {
   }
 });
 
+// Direct function for sending feedback notifications (called from activities route)
+async function sendFeedbackNotification({ email, name, activityName, feedback }) {
+  const prefs = await db.getEmailPreferences(email);
+  if (!prefs.feedbackNotifications) {
+    return { success: true, message: 'User has disabled notifications' };
+  }
+
+  const html = `
+    <h2>New Feedback on Your Activity</h2>
+    <p>Hi ${name},</p>
+    <p>Your manager has reviewed your activity and provided feedback.</p>
+    <p><strong>Activity:</strong> ${activityName}</p>
+    <div style="background-color: #F3F4F6; padding: 16px; border-radius: 8px; margin: 16px 0;">
+      <p style="margin: 0;"><strong>Feedback:</strong></p>
+      <p style="margin: 8px 0 0 0;">${feedback}</p>
+    </div>
+    <p><a href="${process.env.APP_URL || 'https://your-app.replit.app'}" style="background-color: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">View Full Details</a></p>
+  `;
+
+  return sendEmail(email, 'New Feedback on Your Activity', html, EMAIL_TYPES.FEEDBACK_NOTIFICATION);
+}
+
 module.exports = router;
+module.exports.sendFeedbackNotification = sendFeedbackNotification;

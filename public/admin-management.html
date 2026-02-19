@@ -518,10 +518,12 @@
     </div>
   </div>
 
+  <script src="/auth-helpers.js"></script>
   <script>
-    // Check authentication
+    // Check authentication — must have token AND be admin
     const currentUser = JSON.parse(localStorage.getItem('vif-user') || 'null');
-    if (!currentUser) {
+    const authToken = localStorage.getItem('vif-token');
+    if (!currentUser || !authToken || currentUser.role !== 'admin') {
       window.location.href = '/';
     }
 
@@ -582,6 +584,7 @@
       // Logout handler
       document.getElementById('logout-button').addEventListener('click', () => {
         localStorage.removeItem('vif-user');
+        localStorage.removeItem('vif-token');
         window.location.href = '/';
       });
     });
@@ -609,7 +612,7 @@
     // Department functions
     async function loadDepartments() {
       try {
-        const response = await fetch('/api/departments?includeStats=true');
+        const response = await authFetch('/api/departments?includeStats=true');
         const data = await response.json();
 
         if (!data.success) {
@@ -746,7 +749,7 @@
 
         console.log('Submitting department:', { name, description });
 
-        const response = await fetch(url, {
+        const response = await authFetch(url, {
           method,
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name, description })
@@ -779,7 +782,7 @@
       }
 
       try {
-        const response = await fetch(`/api/departments/${id}`, {
+        const response = await authFetch(`/api/departments/${id}`, {
           method: 'DELETE'
         });
 
@@ -800,7 +803,7 @@
 
     async function viewDepartmentMetrics(id) {
       try {
-        const response = await fetch(`/api/departments/${id}/metrics`);
+        const response = await authFetch(`/api/departments/${id}/metrics`);
         const data = await response.json();
 
         if (!data.success) {
@@ -820,7 +823,7 @@
     // Activity Type functions
     async function loadActivityTypes() {
       try {
-        const response = await fetch('/api/activity-types?includeStats=true');
+        const response = await authFetch('/api/activity-types?includeStats=true');
         const data = await response.json();
 
         if (!data.success) {
@@ -953,7 +956,7 @@
 
         const method = editingActivityTypeId ? 'PUT' : 'POST';
 
-        const response = await fetch(url, {
+        const response = await authFetch(url, {
           method,
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name, category, isConsultantOnly, isMandatory })
@@ -985,7 +988,7 @@
       }
 
       try {
-        const response = await fetch(`/api/activity-types/${id}`, {
+        const response = await authFetch(`/api/activity-types/${id}`, {
           method: 'DELETE'
         });
 
@@ -1006,7 +1009,7 @@
 
     async function viewActivityTypeAnalytics(id) {
       try {
-        const response = await fetch(`/api/activity-types/${id}/analytics`);
+        const response = await authFetch(`/api/activity-types/${id}/analytics`);
         const data = await response.json();
 
         if (!data.success) {
@@ -1027,7 +1030,7 @@
 
     async function loadEmployees() {
       try {
-        const response = await fetch('/api/users/employees');
+        const response = await authFetch('/api/users/employees');
         const data = await response.json();
 
         if (!data.success) {
@@ -1280,7 +1283,7 @@
 
         const method = editingEmployeeId ? 'PUT' : 'POST';
 
-        const response = await fetch(url, {
+        const response = await authFetch(url, {
           method,
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name, email, role, visibilityScope, departments: deptAssignments })
@@ -1312,7 +1315,7 @@
       }
 
       try {
-        const response = await fetch(`/api/users/employees/${id}`, {
+        const response = await authFetch(`/api/users/employees/${id}`, {
           method: 'DELETE'
         });
 
