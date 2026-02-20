@@ -2593,9 +2593,12 @@
       const micIcon = document.getElementById('mic-icon');
       const voiceStatus = document.getElementById('voice-status');
 
-      // Helper: create a robust voice recognition session that auto-restarts on mobile
+      // Detect iOS (Safari, Chrome on iOS all use WebKit)
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+      // Helper: create a voice recognition session
       function createVoiceRecognition(options) {
-        const { button, field, statusEl, iconEl, continuous, onTranscript } = options;
+        const { button, field, statusEl, iconEl, onTranscript } = options;
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SpeechRecognition) {
           button.style.display = 'none';
@@ -2606,23 +2609,23 @@
         let isListening = false;
         let manualStop = false;
         let restartCount = 0;
-        let lastErrorType = '';
         const MAX_RESTARTS = 50;
 
         function createRecognition() {
           const rec = new SpeechRecognition();
-          rec.continuous = continuous;
+          // iOS Safari: continuous mode doesn't work, use single-shot
+          // Other browsers: use continuous for longer dictation
+          rec.continuous = isIOS ? false : true;
           rec.interimResults = true;
           rec.lang = 'en-US';
 
           rec.onresult = (event) => {
-            restartCount = 0; // reset on successful speech
+            restartCount = 0;
             onTranscript(event);
           };
 
           rec.onerror = (event) => {
             console.error('Speech recognition error:', event.error);
-            lastErrorType = event.error;
             if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
               manualStop = true;
               stopListening();
@@ -2632,23 +2635,28 @@
               stopListening();
               showNotification('Network Error', 'Voice recognition requires an internet connection.');
             }
-            // All other errors (no-speech, aborted, audio-capture) are
-            // non-fatal — let onend handle restart
           };
 
           rec.onend = () => {
             if (isListening && !manualStop) {
+              if (isIOS) {
+                // iOS: can't auto-restart (requires user gesture)
+                // Just stop cleanly and let user tap again
+                isListening = false;
+                statusEl.textContent = 'Tap to talk';
+                iconEl.classList.remove('text-red-500', 'animate-pulse');
+                return;
+              }
+              // Non-iOS: auto-restart
               restartCount++;
               if (restartCount > MAX_RESTARTS) {
                 stopListening();
                 showNotification('Voice Stopped', 'Voice timed out. Tap the mic to start again.');
                 return;
               }
-              // Delay restart — mobile browsers need time to release the audio session
               setTimeout(() => {
                 if (!isListening || manualStop) return;
                 try {
-                  // Recreate the recognition object for a clean slate on mobile
                   recognition = createRecognition();
                   recognition.start();
                 } catch (e) {
@@ -2684,7 +2692,6 @@
           } else {
             manualStop = false;
             restartCount = 0;
-            lastErrorType = '';
             recognition = createRecognition();
             try {
               recognition.start();
@@ -2707,7 +2714,6 @@
           field: descriptionField,
           statusEl: voiceStatus,
           iconEl: micIcon,
-          continuous: true,
           onTranscript: (event) => {
             let finalTranscript = '';
             let interimTranscript = '';
@@ -2747,7 +2753,6 @@
         field: activityTypeField,
         statusEl: voiceActivityStatus,
         iconEl: micIconActivity,
-        continuous: false,
         onTranscript: (event) => {
           let transcript = '';
           for (let i = 0; i < event.results.length; i++) {
