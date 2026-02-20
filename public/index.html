@@ -2604,20 +2604,6 @@
       // Detect iOS (Safari, Chrome on iOS all use WebKit)
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-      // DEBUG: visible log on screen for mobile debugging (remove after fixing)
-      const voiceDebugEl = document.createElement('div');
-      voiceDebugEl.id = 'voice-debug';
-      voiceDebugEl.style.cssText = 'display:none;position:fixed;bottom:0;left:0;right:0;max-height:40vh;overflow-y:auto;background:rgba(0,0,0,0.9);color:#0f0;font:12px monospace;padding:10px;z-index:99999;';
-      document.body.appendChild(voiceDebugEl);
-      function vlog(msg) {
-        voiceDebugEl.style.display = 'block';
-        const t = new Date().toLocaleTimeString();
-        voiceDebugEl.innerHTML += t + ' ' + msg + '<br>';
-        voiceDebugEl.scrollTop = voiceDebugEl.scrollHeight;
-      }
-      vlog('iOS detected: ' + isIOS);
-      vlog('SpeechRecognition: ' + !!(window.SpeechRecognition || window.webkitSpeechRecognition));
-
       // Helper: create a voice recognition session
       function createVoiceRecognition(options) {
         const { button, field, statusEl, iconEl, onTranscript } = options;
@@ -2639,33 +2625,23 @@
           rec.continuous = isIOS ? false : true;
           rec.interimResults = isIOS ? false : true;
           rec.lang = 'en-US';
-          vlog('Created rec: continuous=' + rec.continuous + ' interim=' + rec.interimResults);
 
           rec.onaudiostart = () => {
-            vlog('EVENT: onaudiostart');
             statusEl.textContent = 'Speak now...';
           };
 
-          rec.onspeechstart = () => { vlog('EVENT: onspeechstart'); };
-          rec.onspeechend = () => { vlog('EVENT: onspeechend'); };
-          rec.onaudioend = () => { vlog('EVENT: onaudioend'); };
-          rec.onsoundstart = () => { vlog('EVENT: onsoundstart'); };
-          rec.onsoundend = () => { vlog('EVENT: onsoundend'); };
-          rec.onstart = () => { vlog('EVENT: onstart'); };
-
           rec.onresult = (event) => {
-            vlog('EVENT: onresult (results=' + event.results.length + ')');
             restartCount = 0;
             gotResult = true;
             onTranscript(event);
           };
 
           rec.onerror = (event) => {
-            vlog('EVENT: onerror → ' + event.error + ' (message: ' + (event.message || 'none') + ')');
+            console.error('Speech recognition error:', event.error);
             manualStop = true;
             stopListening();
             if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-              showNotification('Microphone Blocked', 'Go to Settings > Safari > Microphone and allow access for this site.');
+              showNotification('Microphone Blocked', 'Allow microphone access in your browser settings for this site.');
             } else if (event.error === 'network') {
               showNotification('Network Error', 'Voice needs internet. Check your connection and try again.');
             } else if (event.error === 'no-speech') {
@@ -2678,7 +2654,6 @@
           };
 
           rec.onend = () => {
-            vlog('EVENT: onend (isListening=' + isListening + ' manualStop=' + manualStop + ' gotResult=' + gotResult + ')');
             if (isListening && !manualStop) {
               if (isIOS) {
                 isListening = false;
@@ -2704,9 +2679,8 @@
                 try {
                   recognition = createRecognition();
                   recognition.start();
-                  vlog('Auto-restarted (#' + restartCount + ')');
                 } catch (e) {
-                  vlog('Restart FAILED: ' + e.message);
+                  console.error('Voice restart failed:', e);
                   stopListening();
                 }
               }, 300);
@@ -2732,30 +2706,23 @@
           if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
         }
 
-        let micStream = null; // Keep mic stream alive for iOS
+        let micStream = null;
 
         button.addEventListener('click', async () => {
-          vlog('--- CLICK (isListening=' + isListening + ') ---');
           if (isListening) {
             manualStop = true;
             try { recognition.stop(); } catch (e) {}
             stopListening();
-            // Release mic stream
-            if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
             return;
           }
 
-          // On iOS, get mic permission via getUserMedia first
+          // On iOS, get mic permission via getUserMedia first and keep stream alive
           if (isIOS) {
             try {
               statusEl.textContent = 'Requesting mic...';
-              vlog('Requesting getUserMedia...');
               micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-              vlog('getUserMedia granted, stream active');
-              // Do NOT stop the stream — keep it alive so iOS allows SpeechRecognition
             } catch (e) {
-              vlog('getUserMedia DENIED: ' + e.message);
-              showNotification('Microphone Blocked', 'Please allow microphone access when prompted, or go to Settings > Safari to enable it.');
+              showNotification('Microphone Blocked', 'Please allow microphone access when prompted, or enable it in your browser settings.');
               statusEl.textContent = 'Voice';
               return;
             }
@@ -2767,12 +2734,11 @@
           recognition = createRecognition();
           try {
             recognition.start();
-            vlog('start() called OK');
             isListening = true;
             statusEl.textContent = 'Listening...';
             iconEl.classList.add('text-red-500', 'animate-pulse');
           } catch (e) {
-            vlog('start() FAILED: ' + e.message);
+            console.error('Voice start failed:', e);
             showNotification('Voice Error', 'Could not start: ' + e.message);
             statusEl.textContent = 'Voice';
             if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
