@@ -51,6 +51,7 @@ router.post('/generate', requireAuth, async (req, res) => {
       success: true,
       report: {
         filters: { startDate, endDate, departments, activityTypes, employees, groupBy },
+        period: { startDate: startDate || 'All', endDate: endDate || 'All' },
         totalActivities: filtered.length,
         totalUnits: filtered.reduce((sum, a) => sum + (a.hours || a.units || 0), 0),
         grouped,
@@ -120,7 +121,8 @@ router.get('/standard/weekly', requireAuth, async (req, res) => {
         totalUnits: filtered.reduce((sum, a) => sum + (a.hours || a.units || 0), 0),
         byDepartment,
         byType,
-        byEmployee
+        byEmployee,
+        activities: filtered
       }
     });
   } catch (error) {
@@ -130,14 +132,20 @@ router.get('/standard/weekly', requireAuth, async (req, res) => {
 });
 
 // GET /api/reports/standard/monthly-department — admin department report
-router.get('/standard/monthly-department', requireAuth, requireAdmin, async (req, res) => {
+router.get('/standard/monthly-department', requireAuth, async (req, res) => {
   try {
     const today = new Date();
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
     const startDate = startOfMonth.toISOString().split('T')[0];
     const endDate = today.toISOString().split('T')[0];
 
-    const allActivities = await db.getAllActivities();
+    const isAdmin = req.user.role === 'admin';
+    let allActivities;
+    if (isAdmin) {
+      allActivities = await db.getAllActivities();
+    } else {
+      allActivities = await db.getActivitiesByUser(req.user.email);
+    }
 
     const filtered = allActivities.filter(a => {
       const d = (a.week || a.createdAt || '').split('T')[0];
@@ -170,13 +178,21 @@ router.get('/standard/monthly-department', requireAuth, requireAdmin, async (req
         .map(([type, count]) => ({ type, count }))
     }));
 
+    // Also build byDepartment in the format the frontend chart expects
+    const byDepartmentChart = {};
+    Object.entries(byDepartment).forEach(([dept, data]) => {
+      byDepartmentChart[dept] = { count: data.count, totalUnits: data.units };
+    });
+
     res.json({
       success: true,
       report: {
         period: { startDate, endDate },
         totalActivities: filtered.length,
         totalUnits: filtered.reduce((sum, a) => sum + (a.hours || a.units || 0), 0),
-        departments
+        byDepartment: byDepartmentChart,
+        departments,
+        activities: filtered
       }
     });
   } catch (error) {
