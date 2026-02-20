@@ -2663,16 +2663,19 @@
 
         recognition.onend = () => {
           if (isListening && !manualStop) {
-            // Auto-restart: mobile browsers kill recognition prematurely
-            try {
-              voiceBaseText = descriptionField.value;
-              recognition.start();
-            } catch (e) {
-              // If restart fails, clean up
-              isListening = false;
-              voiceStatus.textContent = 'Voice';
-              micIcon.classList.remove('text-red-500', 'animate-pulse');
-            }
+            // Auto-restart after a short delay — mobile browsers throw
+            // InvalidStateError if start() is called synchronously in onend
+            voiceBaseText = descriptionField.value;
+            setTimeout(() => {
+              if (!isListening || manualStop) return;
+              try {
+                recognition.start();
+              } catch (e) {
+                isListening = false;
+                voiceStatus.textContent = 'Voice';
+                micIcon.classList.remove('text-red-500', 'animate-pulse');
+              }
+            }, 250);
           } else {
             isListening = false;
             manualStop = false;
@@ -2737,14 +2740,17 @@
 
         recognitionAT.onend = () => {
           if (isListeningAT && !manualStopAT) {
-            // Auto-restart for mobile browsers that stop prematurely
-            try {
-              recognitionAT.start();
-            } catch (e) {
-              isListeningAT = false;
-              voiceActivityStatus.textContent = 'Voice';
-              micIconActivity.classList.remove('text-red-500', 'animate-pulse');
-            }
+            // Auto-restart after a short delay for mobile compatibility
+            setTimeout(() => {
+              if (!isListeningAT || manualStopAT) return;
+              try {
+                recognitionAT.start();
+              } catch (e) {
+                isListeningAT = false;
+                voiceActivityStatus.textContent = 'Voice';
+                micIconActivity.classList.remove('text-red-500', 'animate-pulse');
+              }
+            }, 250);
           } else {
             isListeningAT = false;
             manualStopAT = false;
