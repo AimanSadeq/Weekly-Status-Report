@@ -2604,19 +2604,6 @@
       // Detect iOS (Safari, Chrome on iOS all use WebKit)
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-      // Helper: request microphone permission explicitly (needed for iOS Safari)
-      async function ensureMicPermission() {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          // Stop all tracks immediately — we just needed the permission grant
-          stream.getTracks().forEach(track => track.stop());
-          return true;
-        } catch (e) {
-          console.error('Microphone permission denied:', e);
-          return false;
-        }
-      }
-
       // Helper: create a voice recognition session
       function createVoiceRecognition(options) {
         const { button, field, statusEl, iconEl, onTranscript } = options;
@@ -2629,47 +2616,61 @@
         let recognition = null;
         let isListening = false;
         let manualStop = false;
+        let gotResult = false;
         let restartCount = 0;
         const MAX_RESTARTS = 50;
 
         function createRecognition() {
           const rec = new SpeechRecognition();
           rec.continuous = isIOS ? false : true;
-          // iOS Safari: interimResults can cause issues, disable it
           rec.interimResults = isIOS ? false : true;
           rec.lang = 'en-US';
 
+          rec.onaudiostart = () => {
+            statusEl.textContent = 'Speak now...';
+          };
+
           rec.onresult = (event) => {
             restartCount = 0;
+            gotResult = true;
             onTranscript(event);
           };
 
           rec.onerror = (event) => {
             console.error('Speech recognition error:', event.error);
+            manualStop = true;
+            stopListening();
             if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-              manualStop = true;
-              stopListening();
-              showNotification('Microphone Access Denied', 'Please enable microphone permissions in Settings > Safari > Microphone.');
+              showNotification('Microphone Blocked', 'Go to Settings > Safari > Microphone and allow access for this site.');
             } else if (event.error === 'network') {
-              manualStop = true;
-              stopListening();
-              showNotification('Network Error', 'Voice recognition requires an internet connection.');
+              showNotification('Network Error', 'Voice needs internet. Check your connection and try again.');
+            } else if (event.error === 'no-speech') {
+              showNotification('No Speech Heard', 'Tap the mic and speak clearly.');
+            } else if (event.error === 'audio-capture') {
+              showNotification('No Microphone', 'Could not access microphone. Check your device settings.');
             } else {
-              // Show any other error so we can debug
-              showNotification('Voice Error', 'Speech error: ' + event.error + '. Tap mic to try again.');
-              manualStop = true;
-              stopListening();
+              showNotification('Voice Error', 'Error: ' + event.error);
             }
           };
 
           rec.onend = () => {
             if (isListening && !manualStop) {
               if (isIOS) {
+                // iOS single-shot: show result feedback then reset
                 isListening = false;
-                statusEl.textContent = 'Tap to talk';
+                if (gotResult) {
+                  statusEl.textContent = 'Done! Tap for more';
+                } else {
+                  statusEl.textContent = 'No speech. Tap to retry';
+                }
                 iconEl.classList.remove('text-red-500', 'animate-pulse');
+                // Reset button text after 3 seconds
+                setTimeout(() => {
+                  if (!isListening) statusEl.textContent = 'Voice';
+                }, 3000);
                 return;
               }
+              // Non-iOS: auto-restart
               restartCount++;
               if (restartCount > MAX_RESTARTS) {
                 stopListening();
@@ -2701,12 +2702,13 @@
           isListening = false;
           manualStop = false;
           restartCount = 0;
+          gotResult = false;
           statusEl.textContent = 'Voice';
           iconEl.classList.remove('text-red-500', 'animate-pulse');
           try { recognition.stop(); } catch (e) {}
         }
 
-        button.addEventListener('click', async () => {
+        button.addEventListener('click', () => {
           if (isListening) {
             manualStop = true;
             try { recognition.stop(); } catch (e) {}
@@ -2714,20 +2716,9 @@
             return;
           }
 
-          // On iOS, request microphone permission first via getUserMedia
-          // iOS Safari requires this before SpeechRecognition will work
-          if (isIOS) {
-            statusEl.textContent = 'Requesting mic...';
-            const hasMic = await ensureMicPermission();
-            if (!hasMic) {
-              showNotification('Microphone Access Denied', 'Please allow microphone access in your browser settings and try again.');
-              statusEl.textContent = 'Voice';
-              return;
-            }
-          }
-
           manualStop = false;
           restartCount = 0;
+          gotResult = false;
           recognition = createRecognition();
           try {
             recognition.start();
@@ -2736,7 +2727,7 @@
             iconEl.classList.add('text-red-500', 'animate-pulse');
           } catch (e) {
             console.error('Voice start failed:', e);
-            showNotification('Voice Error', 'Could not start voice input: ' + e.message);
+            showNotification('Voice Error', 'Could not start: ' + e.message);
             statusEl.textContent = 'Voice';
           }
         });
