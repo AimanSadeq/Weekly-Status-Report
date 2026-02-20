@@ -53,8 +53,14 @@ app.use(helmet({
       connectSrc: ["'self'", "https:", "wss:"],
       fontSrc: ["'self'", "https://cdn.jsdelivr.net", "https://fonts.gstatic.com"],
       objectSrc: ["'none'"],
-      mediaSrc: ["'self'"],
+      mediaSrc: ["'self'", "blob:"],
       frameSrc: ["'none'"]
+    }
+  },
+  // Allow microphone access for voice input feature
+  permissionsPolicy: {
+    features: {
+      microphone: ['self']
     }
   }
 }));
