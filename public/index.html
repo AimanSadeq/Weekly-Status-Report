@@ -732,12 +732,25 @@
             </div>
           </div>
 
-          <!-- Row 2: Activity Type + Description -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <!-- Row 2: Activity Type + Description (same line) -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:items-start">
             <div>
-              <label for="activity-type" class="block text-sm font-medium text-gray-700 mb-1">
-                Activity Type <span class="text-red-500">*</span>
-              </label>
+              <div class="flex items-center justify-between mb-1" style="min-height: 28px;">
+                <label for="activity-type" class="text-sm font-medium text-gray-700">
+                  Activity Type <span class="text-red-500">*</span>
+                </label>
+                <button
+                  type="button"
+                  id="voice-activity-btn"
+                  class="flex items-center gap-1 px-3 py-1 text-xs font-semibold bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors shadow-md"
+                  title="Click to dictate activity type"
+                >
+                  <svg id="mic-icon-activity" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
+                  </svg>
+                  <span id="voice-activity-status">Voice</span>
+                </button>
+              </div>
               <input
                 type="text"
                 id="activity-type"
@@ -747,8 +760,8 @@
               />
             </div>
             <div>
-              <div class="flex items-center justify-between mb-1">
-                <label for="description" class="block text-sm font-medium text-gray-700">
+              <div class="flex items-center justify-between mb-1" style="min-height: 28px;">
+                <label for="description" class="text-sm font-medium text-gray-700">
                   Description <span class="text-gray-400 text-xs">(optional)</span>
                 </label>
                 <button
@@ -1008,6 +1021,23 @@
       <div class="flex gap-2 justify-end">
         <button onclick="document.getElementById('bulk-confirm-modal').classList.add('hidden')" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium">Cancel</button>
         <button id="bulk-confirm-yes" class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-500">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Activity Detail Modal -->
+  <div id="activity-detail-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center px-4">
+    <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+      <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-xl flex justify-between items-center">
+        <h3 class="text-lg font-bold text-gray-900">Activity Details</h3>
+        <button id="close-detail-modal" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+      </div>
+      <div id="activity-detail-body" class="px-6 py-4 space-y-4">
+        <!-- Populated dynamically -->
+      </div>
+      <div class="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-3 rounded-b-xl flex gap-2 justify-end">
+        <button id="detail-edit-btn" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium">Edit</button>
+        <button id="detail-close-btn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm font-medium">Close</button>
       </div>
     </div>
   </div>
@@ -1320,7 +1350,7 @@
 
         // Desktop view (table row)
         const desktopView = `
-          <div class="activity-item bg-white border-b border-gray-200 hover:bg-gray-50 transition-colors desktop-view">
+          <div class="activity-item bg-white border-b border-gray-200 hover:bg-gray-50 transition-colors desktop-view cursor-pointer" data-detail-id="${escapeHtml(activity.id)}">
             <div class="flex items-center gap-3 px-3 py-2 text-sm">
               <input type="checkbox" class="bulk-check" data-id="${escapeHtml(activity.id)}" />
               <span class="text-gray-600 w-24">${date !== 'No Date' ? new Date(date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'No Date'}</span>
@@ -1339,7 +1369,7 @@
 
         // Mobile view (card layout)
         const mobileView = `
-          <div class="activity-item bg-white border-b border-gray-200 mobile-view" style="display: none;">
+          <div class="activity-item bg-white border-b border-gray-200 mobile-view cursor-pointer" style="display: none;" data-detail-id="${escapeHtml(activity.id)}">
             <div class="mobile-card">
               <div class="flex items-center gap-2 mb-2">
                 <input type="checkbox" class="bulk-check" data-id="${escapeHtml(activity.id)}" />
@@ -1404,16 +1434,33 @@
 
       // Add event listeners for edit and delete buttons using event delegation
       container.querySelectorAll('.edit-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
+        btn.addEventListener('click', function(e) {
+          e.stopPropagation();
           const activityId = this.getAttribute('data-activity-id');
           editActivity(activityId);
         });
       });
 
       container.querySelectorAll('.delete-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
+        btn.addEventListener('click', function(e) {
+          e.stopPropagation();
           const activityId = this.getAttribute('data-activity-id');
           deleteActivity(activityId);
+        });
+      });
+
+      // Checkbox clicks should not open detail
+      container.querySelectorAll('.bulk-check, #select-all-check').forEach(cb => {
+        cb.addEventListener('click', function(e) {
+          e.stopPropagation();
+        });
+      });
+
+      // Click on activity row opens detail modal
+      container.querySelectorAll('[data-detail-id]').forEach(row => {
+        row.addEventListener('click', function() {
+          const activityId = this.getAttribute('data-detail-id');
+          showActivityDetail(activityId);
         });
       });
     }
@@ -1799,6 +1846,117 @@
       renderPendingActivities();
       showNotification('Activity removed', 'success');
     };
+
+    function showActivityDetail(activityId) {
+      const activity = activities.find(a => a.id === activityId);
+      if (!activity) return;
+
+      const modal = document.getElementById('activity-detail-modal');
+      const body = document.getElementById('activity-detail-body');
+
+      const statusColors = {
+        'draft': 'bg-gray-100 text-gray-700',
+        'pending': 'bg-yellow-100 text-yellow-800',
+        'submitted': 'bg-blue-100 text-blue-800',
+        'approved': 'bg-green-100 text-green-800',
+        'reviewed': 'bg-green-100 text-green-800',
+        'needs_revision': 'bg-orange-100 text-orange-800',
+        'in-progress': 'bg-blue-100 text-blue-800',
+        'completed': 'bg-green-100 text-green-800'
+      };
+      const statusColor = statusColors[activity.status] || statusColors['draft'];
+      const statusLabel = (activity.status || 'draft').replace(/_/g, ' ');
+
+      const activityDate = activity.week || activity.activityDate;
+      const formattedDate = activityDate
+        ? new Date(activityDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+        : 'No date';
+
+      const createdAt = activity.createdAt
+        ? new Date(activity.createdAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
+        : '';
+
+      const submittedAt = activity.submittedAt
+        ? new Date(activity.submittedAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
+        : '';
+
+      const reviewedAt = activity.reviewedAt
+        ? new Date(activity.reviewedAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
+        : '';
+
+      const units = activity.units || activity.unitsCompleted;
+      const hasUnits = units && !isNaN(Number(units)) && Number(units) > 0;
+
+      body.innerHTML = `
+        <div class="flex items-center justify-between">
+          <span class="px-3 py-1 rounded-full text-sm font-semibold capitalize ${statusColor}">${escapeHtml(statusLabel)}</span>
+          <span class="text-sm text-gray-500">${escapeHtml(formattedDate)}</span>
+        </div>
+
+        <div>
+          <h4 class="text-xl font-bold text-gray-900">${escapeHtml(activity.title || activity.activityType || '')}</h4>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div class="bg-gray-50 rounded-lg p-3">
+            <p class="text-xs font-medium text-gray-500 uppercase">Employee</p>
+            <p class="text-sm font-semibold text-gray-900 mt-0.5">${escapeHtml(activity.name || currentUser?.name || '')}</p>
+          </div>
+          <div class="bg-gray-50 rounded-lg p-3">
+            <p class="text-xs font-medium text-gray-500 uppercase">Department</p>
+            <p class="text-sm font-semibold text-gray-900 mt-0.5">${escapeHtml(activity.department || '')}</p>
+          </div>
+          ${hasUnits ? `
+          <div class="bg-gray-50 rounded-lg p-3">
+            <p class="text-xs font-medium text-gray-500 uppercase">Units</p>
+            <p class="text-sm font-semibold text-blue-700 mt-0.5">${escapeHtml(String(units))}</p>
+          </div>` : ''}
+          ${activity.email ? `
+          <div class="bg-gray-50 rounded-lg p-3">
+            <p class="text-xs font-medium text-gray-500 uppercase">Email</p>
+            <p class="text-sm font-semibold text-gray-900 mt-0.5">${escapeHtml(activity.email)}</p>
+          </div>` : ''}
+        </div>
+
+        ${activity.description ? `
+        <div>
+          <p class="text-xs font-medium text-gray-500 uppercase mb-1">Description</p>
+          <p class="text-sm text-gray-700 bg-gray-50 rounded-lg p-3 whitespace-pre-wrap">${escapeHtml(activity.description)}</p>
+        </div>` : ''}
+
+        ${activity.adminFeedback ? `
+        <div>
+          <p class="text-xs font-medium text-gray-500 uppercase mb-1">Admin Feedback</p>
+          <p class="text-sm text-orange-800 bg-orange-50 border border-orange-200 rounded-lg p-3 whitespace-pre-wrap">${escapeHtml(activity.adminFeedback)}</p>
+        </div>` : ''}
+
+        <div class="border-t border-gray-200 pt-3 space-y-1">
+          ${createdAt ? `<p class="text-xs text-gray-500"><span class="font-medium">Created:</span> ${escapeHtml(createdAt)}</p>` : ''}
+          ${submittedAt ? `<p class="text-xs text-gray-500"><span class="font-medium">Submitted:</span> ${escapeHtml(submittedAt)}</p>` : ''}
+          ${reviewedAt ? `<p class="text-xs text-gray-500"><span class="font-medium">Reviewed:</span> ${escapeHtml(reviewedAt)}</p>` : ''}
+          <p class="text-xs text-gray-400"><span class="font-medium">ID:</span> ${escapeHtml(activity.id)}</p>
+        </div>
+      `;
+
+      // Wire up modal buttons
+      const editBtn = document.getElementById('detail-edit-btn');
+      const closeBtn = document.getElementById('detail-close-btn');
+      const closeX = document.getElementById('close-detail-modal');
+
+      editBtn.onclick = () => {
+        modal.classList.add('hidden');
+        editActivity(activityId);
+      };
+      closeBtn.onclick = () => modal.classList.add('hidden');
+      closeX.onclick = () => modal.classList.add('hidden');
+
+      // Close on backdrop click
+      modal.onclick = (e) => {
+        if (e.target === modal) modal.classList.add('hidden');
+      };
+
+      modal.classList.remove('hidden');
+    }
 
     function editActivity(activityId) {
       console.log('Edit activity called with ID:', activityId);
@@ -2439,8 +2597,8 @@
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         const recognition = new SpeechRecognition();
 
-        recognition.continuous = false;
-        recognition.interimResults = false;
+        recognition.continuous = true;
+        recognition.interimResults = true;
         recognition.lang = 'en-US';
 
         let isListening = false;
@@ -2452,25 +2610,35 @@
             voiceStatus.textContent = 'Voice';
             micIcon.classList.remove('text-red-500', 'animate-pulse');
           } else {
+            voiceBaseText = descriptionField.value;
             recognition.start();
             isListening = true;
-            voiceStatus.textContent = 'Listening...';
+            voiceStatus.textContent = 'Click to stop recording';
             micIcon.classList.add('text-red-500', 'animate-pulse');
           }
         });
 
-        recognition.onresult = (event) => {
-          const transcript = event.results[0][0].transcript;
+        let voiceBaseText = '';
 
-          // Append to existing text or replace if empty
-          if (descriptionField.value.trim()) {
-            descriptionField.value += ' ' + transcript;
-          } else {
-            descriptionField.value = transcript;
+        recognition.onresult = (event) => {
+          let finalTranscript = '';
+          let interimTranscript = '';
+
+          for (let i = 0; i < event.results.length; i++) {
+            if (event.results[i].isFinal) {
+              finalTranscript += event.results[i][0].transcript;
+            } else {
+              interimTranscript += event.results[i][0].transcript;
+            }
           }
 
-          console.log('Voice input:', transcript);
-          showNotification('Voice Input Received', transcript);
+          // Show final + interim text in the field
+          const combined = (finalTranscript + ' ' + interimTranscript).trim();
+          if (voiceBaseText.trim()) {
+            descriptionField.value = voiceBaseText + ' ' + combined;
+          } else {
+            descriptionField.value = combined;
+          }
         };
 
         recognition.onerror = (event) => {
@@ -2495,6 +2663,66 @@
         // Hide voice button if not supported
         voiceBtn.style.display = 'none';
         console.warn('Speech recognition not supported in this browser');
+      }
+
+      // 3b. Voice-to-Text for Activity Type
+      const voiceActivityBtn = document.getElementById('voice-activity-btn');
+      const activityTypeField = document.getElementById('activity-type');
+      const micIconActivity = document.getElementById('mic-icon-activity');
+      const voiceActivityStatus = document.getElementById('voice-activity-status');
+
+      if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        const SpeechRecognitionAT = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognitionAT = new SpeechRecognitionAT();
+
+        recognitionAT.continuous = false;
+        recognitionAT.interimResults = true;
+        recognitionAT.lang = 'en-US';
+
+        let isListeningAT = false;
+
+        voiceActivityBtn.addEventListener('click', () => {
+          if (isListeningAT) {
+            recognitionAT.stop();
+            isListeningAT = false;
+            voiceActivityStatus.textContent = 'Voice';
+            micIconActivity.classList.remove('text-red-500', 'animate-pulse');
+          } else {
+            recognitionAT.start();
+            isListeningAT = true;
+            voiceActivityStatus.textContent = 'Click to stop recording';
+            micIconActivity.classList.add('text-red-500', 'animate-pulse');
+          }
+        });
+
+        recognitionAT.onresult = (event) => {
+          let transcript = '';
+          for (let i = 0; i < event.results.length; i++) {
+            transcript += event.results[i][0].transcript;
+          }
+          activityTypeField.value = transcript;
+        };
+
+        recognitionAT.onerror = (event) => {
+          console.error('Speech recognition error (activity type):', event.error);
+          isListeningAT = false;
+          voiceActivityStatus.textContent = 'Voice';
+          micIconActivity.classList.remove('text-red-500', 'animate-pulse');
+
+          if (event.error === 'no-speech') {
+            showNotification('No Speech Detected', 'Please try again and speak clearly.');
+          } else if (event.error === 'not-allowed') {
+            showNotification('Microphone Access Denied', 'Please enable microphone permissions.');
+          }
+        };
+
+        recognitionAT.onend = () => {
+          isListeningAT = false;
+          voiceActivityStatus.textContent = 'Voice';
+          micIconActivity.classList.remove('text-red-500', 'animate-pulse');
+        };
+      } else {
+        voiceActivityBtn.style.display = 'none';
       }
 
       // 4. Offline/Online Detection
@@ -2954,6 +3182,7 @@
         document.getElementById('change-password-modal')?.classList.add('hidden');
         document.getElementById('export-modal')?.classList.add('hidden');
         document.getElementById('bulk-confirm-modal')?.classList.add('hidden');
+        document.getElementById('activity-detail-modal')?.classList.add('hidden');
         document.getElementById('shortcuts-help')?.classList.add('hidden');
         document.getElementById('notif-dropdown')?.classList.remove('active');
         return;

@@ -442,6 +442,7 @@ class DBModel {
       const { data, error } = await storage.supabase
         .from('activities')
         .select('*')
+        .is('deleted_at', null)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -473,6 +474,7 @@ class DBModel {
         .from('activities')
         .select('*')
         .eq('employee_id', employee.id)
+        .is('deleted_at', null)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -526,6 +528,7 @@ class DBModel {
         .from('activities')
         .select('*')
         .in('department_id', departmentIds)
+        .is('deleted_at', null)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -545,6 +548,7 @@ class DBModel {
         .from('activities')
         .select('*')
         .eq('week_ending', weekEnding)
+        .is('deleted_at', null)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -564,6 +568,7 @@ class DBModel {
         .from('activities')
         .select('*')
         .eq('status', status)
+        .is('deleted_at', null)
         .order('created_at', { ascending: false });
 
       if (error) {
