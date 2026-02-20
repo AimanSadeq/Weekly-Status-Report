@@ -2604,6 +2604,20 @@
       // Detect iOS (Safari, Chrome on iOS all use WebKit)
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
+      // DEBUG: visible log on screen for mobile debugging (remove after fixing)
+      const voiceDebugEl = document.createElement('div');
+      voiceDebugEl.id = 'voice-debug';
+      voiceDebugEl.style.cssText = 'display:none;position:fixed;bottom:0;left:0;right:0;max-height:40vh;overflow-y:auto;background:rgba(0,0,0,0.9);color:#0f0;font:12px monospace;padding:10px;z-index:99999;';
+      document.body.appendChild(voiceDebugEl);
+      function vlog(msg) {
+        voiceDebugEl.style.display = 'block';
+        const t = new Date().toLocaleTimeString();
+        voiceDebugEl.innerHTML += t + ' ' + msg + '<br>';
+        voiceDebugEl.scrollTop = voiceDebugEl.scrollHeight;
+      }
+      vlog('iOS detected: ' + isIOS);
+      vlog('SpeechRecognition: ' + !!(window.SpeechRecognition || window.webkitSpeechRecognition));
+
       // Helper: create a voice recognition session
       function createVoiceRecognition(options) {
         const { button, field, statusEl, iconEl, onTranscript } = options;
@@ -2625,19 +2639,29 @@
           rec.continuous = isIOS ? false : true;
           rec.interimResults = isIOS ? false : true;
           rec.lang = 'en-US';
+          vlog('Created rec: continuous=' + rec.continuous + ' interim=' + rec.interimResults);
 
           rec.onaudiostart = () => {
+            vlog('EVENT: onaudiostart');
             statusEl.textContent = 'Speak now...';
           };
 
+          rec.onspeechstart = () => { vlog('EVENT: onspeechstart'); };
+          rec.onspeechend = () => { vlog('EVENT: onspeechend'); };
+          rec.onaudioend = () => { vlog('EVENT: onaudioend'); };
+          rec.onsoundstart = () => { vlog('EVENT: onsoundstart'); };
+          rec.onsoundend = () => { vlog('EVENT: onsoundend'); };
+          rec.onstart = () => { vlog('EVENT: onstart'); };
+
           rec.onresult = (event) => {
+            vlog('EVENT: onresult (results=' + event.results.length + ')');
             restartCount = 0;
             gotResult = true;
             onTranscript(event);
           };
 
           rec.onerror = (event) => {
-            console.error('Speech recognition error:', event.error);
+            vlog('EVENT: onerror → ' + event.error + ' (message: ' + (event.message || 'none') + ')');
             manualStop = true;
             stopListening();
             if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
@@ -2654,9 +2678,9 @@
           };
 
           rec.onend = () => {
+            vlog('EVENT: onend (isListening=' + isListening + ' manualStop=' + manualStop + ' gotResult=' + gotResult + ')');
             if (isListening && !manualStop) {
               if (isIOS) {
-                // iOS single-shot: show result feedback then reset
                 isListening = false;
                 if (gotResult) {
                   statusEl.textContent = 'Done! Tap for more';
@@ -2664,13 +2688,11 @@
                   statusEl.textContent = 'No speech. Tap to retry';
                 }
                 iconEl.classList.remove('text-red-500', 'animate-pulse');
-                // Reset button text after 3 seconds
                 setTimeout(() => {
                   if (!isListening) statusEl.textContent = 'Voice';
                 }, 3000);
                 return;
               }
-              // Non-iOS: auto-restart
               restartCount++;
               if (restartCount > MAX_RESTARTS) {
                 stopListening();
@@ -2682,8 +2704,9 @@
                 try {
                   recognition = createRecognition();
                   recognition.start();
+                  vlog('Auto-restarted (#' + restartCount + ')');
                 } catch (e) {
-                  console.error('Voice restart failed:', e);
+                  vlog('Restart FAILED: ' + e.message);
                   stopListening();
                 }
               }, 300);
@@ -2709,6 +2732,7 @@
         }
 
         button.addEventListener('click', () => {
+          vlog('--- CLICK (isListening=' + isListening + ') ---');
           if (isListening) {
             manualStop = true;
             try { recognition.stop(); } catch (e) {}
@@ -2722,6 +2746,7 @@
           recognition = createRecognition();
           try {
             recognition.start();
+            vlog('start() called OK');
             isListening = true;
             statusEl.textContent = 'Listening...';
             iconEl.classList.add('text-red-500', 'animate-pulse');
