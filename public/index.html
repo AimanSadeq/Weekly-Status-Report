@@ -402,10 +402,13 @@
     .pw-strength.medium { background: #f59e0b; width: 66%; }
     .pw-strength.strong { background: #10b981; width: 100%; }
 
-    /* Mobile input fix - prevent iOS zoom */
+    /* Mobile input fix - prevent iOS zoom and overflow */
     @media screen and (max-width: 768px) {
       input, select, textarea {
         font-size: 16px !important;
+        max-width: 100%;
+        box-sizing: border-box;
+        min-width: 0;
       }
       /* Improve touch targets */
       button, a, .filter-btn {
@@ -718,7 +721,8 @@
                 id="activity-date"
                 type="date"
                 required
-                class="w-full px-3 py-2 border-2 border-indigo-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm font-semibold"
+                class="w-full max-w-full px-3 py-2 border-2 border-indigo-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm font-semibold box-border"
+                style="-webkit-appearance: none; min-width: 0;"
               />
             </div>
             <div>
