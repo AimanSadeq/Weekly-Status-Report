@@ -2729,15 +2729,36 @@
           statusEl.textContent = 'Voice';
           iconEl.classList.remove('text-red-500', 'animate-pulse');
           try { recognition.stop(); } catch (e) {}
+          if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
         }
 
-        button.addEventListener('click', () => {
+        let micStream = null; // Keep mic stream alive for iOS
+
+        button.addEventListener('click', async () => {
           vlog('--- CLICK (isListening=' + isListening + ') ---');
           if (isListening) {
             manualStop = true;
             try { recognition.stop(); } catch (e) {}
             stopListening();
+            // Release mic stream
+            if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
             return;
+          }
+
+          // On iOS, get mic permission via getUserMedia first
+          if (isIOS) {
+            try {
+              statusEl.textContent = 'Requesting mic...';
+              vlog('Requesting getUserMedia...');
+              micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+              vlog('getUserMedia granted, stream active');
+              // Do NOT stop the stream — keep it alive so iOS allows SpeechRecognition
+            } catch (e) {
+              vlog('getUserMedia DENIED: ' + e.message);
+              showNotification('Microphone Blocked', 'Please allow microphone access when prompted, or go to Settings > Safari to enable it.');
+              statusEl.textContent = 'Voice';
+              return;
+            }
           }
 
           manualStop = false;
@@ -2751,9 +2772,10 @@
             statusEl.textContent = 'Listening...';
             iconEl.classList.add('text-red-500', 'animate-pulse');
           } catch (e) {
-            console.error('Voice start failed:', e);
+            vlog('start() FAILED: ' + e.message);
             showNotification('Voice Error', 'Could not start: ' + e.message);
             statusEl.textContent = 'Voice';
+            if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
           }
         });
       }
