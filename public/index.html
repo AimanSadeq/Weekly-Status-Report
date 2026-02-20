@@ -2593,101 +2593,148 @@
       const micIcon = document.getElementById('mic-icon');
       const voiceStatus = document.getElementById('voice-status');
 
-      if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      // Helper: create a robust voice recognition session that auto-restarts on mobile
+      function createVoiceRecognition(options) {
+        const { button, field, statusEl, iconEl, continuous, onTranscript } = options;
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        const recognition = new SpeechRecognition();
+        if (!SpeechRecognition) {
+          button.style.display = 'none';
+          return;
+        }
 
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        recognition.lang = 'en-US';
-
+        let recognition = null;
         let isListening = false;
         let manualStop = false;
-        let voiceBaseText = '';
+        let restartCount = 0;
+        let lastErrorType = '';
+        const MAX_RESTARTS = 50;
 
-        voiceBtn.addEventListener('click', () => {
+        function createRecognition() {
+          const rec = new SpeechRecognition();
+          rec.continuous = continuous;
+          rec.interimResults = true;
+          rec.lang = 'en-US';
+
+          rec.onresult = (event) => {
+            restartCount = 0; // reset on successful speech
+            onTranscript(event);
+          };
+
+          rec.onerror = (event) => {
+            console.error('Speech recognition error:', event.error);
+            lastErrorType = event.error;
+            if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+              manualStop = true;
+              stopListening();
+              showNotification('Microphone Access Denied', 'Please enable microphone permissions in your browser settings.');
+            } else if (event.error === 'network') {
+              manualStop = true;
+              stopListening();
+              showNotification('Network Error', 'Voice recognition requires an internet connection.');
+            }
+            // All other errors (no-speech, aborted, audio-capture) are
+            // non-fatal — let onend handle restart
+          };
+
+          rec.onend = () => {
+            if (isListening && !manualStop) {
+              restartCount++;
+              if (restartCount > MAX_RESTARTS) {
+                stopListening();
+                showNotification('Voice Stopped', 'Voice timed out. Tap the mic to start again.');
+                return;
+              }
+              // Delay restart — mobile browsers need time to release the audio session
+              setTimeout(() => {
+                if (!isListening || manualStop) return;
+                try {
+                  // Recreate the recognition object for a clean slate on mobile
+                  recognition = createRecognition();
+                  recognition.start();
+                } catch (e) {
+                  console.error('Voice restart failed:', e);
+                  stopListening();
+                }
+              }, 300);
+            } else {
+              isListening = false;
+              manualStop = false;
+              statusEl.textContent = 'Voice';
+              iconEl.classList.remove('text-red-500', 'animate-pulse');
+            }
+          };
+
+          return rec;
+        }
+
+        function stopListening() {
+          isListening = false;
+          manualStop = false;
+          restartCount = 0;
+          statusEl.textContent = 'Voice';
+          iconEl.classList.remove('text-red-500', 'animate-pulse');
+          try { recognition.stop(); } catch (e) {}
+        }
+
+        button.addEventListener('click', () => {
           if (isListening) {
             manualStop = true;
-            recognition.stop();
+            try { recognition.stop(); } catch (e) {}
+            stopListening();
           } else {
-            voiceBaseText = descriptionField.value;
             manualStop = false;
-            recognition.start();
-            isListening = true;
-            voiceStatus.textContent = 'Listening...';
-            micIcon.classList.add('text-red-500', 'animate-pulse');
+            restartCount = 0;
+            lastErrorType = '';
+            recognition = createRecognition();
+            try {
+              recognition.start();
+              isListening = true;
+              statusEl.textContent = 'Listening...';
+              iconEl.classList.add('text-red-500', 'animate-pulse');
+            } catch (e) {
+              console.error('Voice start failed:', e);
+              showNotification('Voice Error', 'Could not start voice input. Please try again.');
+            }
+          }
+        });
+      }
+
+      // 3. Voice-to-Text for Description
+      (function() {
+        let voiceBaseText = '';
+        createVoiceRecognition({
+          button: voiceBtn,
+          field: descriptionField,
+          statusEl: voiceStatus,
+          iconEl: micIcon,
+          continuous: true,
+          onTranscript: (event) => {
+            let finalTranscript = '';
+            let interimTranscript = '';
+            for (let i = 0; i < event.results.length; i++) {
+              if (event.results[i].isFinal) {
+                finalTranscript += event.results[i][0].transcript;
+              } else {
+                interimTranscript += event.results[i][0].transcript;
+              }
+            }
+            const combined = (finalTranscript + ' ' + interimTranscript).trim();
+            if (voiceBaseText.trim()) {
+              descriptionField.value = voiceBaseText + ' ' + combined;
+            } else {
+              descriptionField.value = combined;
+            }
+            if (finalTranscript) {
+              voiceBaseText = descriptionField.value;
+            }
           }
         });
 
-        recognition.onresult = (event) => {
-          let finalTranscript = '';
-          let interimTranscript = '';
-
-          for (let i = 0; i < event.results.length; i++) {
-            if (event.results[i].isFinal) {
-              finalTranscript += event.results[i][0].transcript;
-            } else {
-              interimTranscript += event.results[i][0].transcript;
-            }
-          }
-
-          // Show final + interim text in the field
-          const combined = (finalTranscript + ' ' + interimTranscript).trim();
-          if (voiceBaseText.trim()) {
-            descriptionField.value = voiceBaseText + ' ' + combined;
-          } else {
-            descriptionField.value = combined;
-          }
-
-          // Save finalized text so it persists across auto-restarts
-          if (finalTranscript) {
-            voiceBaseText = descriptionField.value;
-          }
-        };
-
-        recognition.onerror = (event) => {
-          console.error('Speech recognition error:', event.error);
-          // For fatal errors, stop completely
-          if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-            isListening = false;
-            manualStop = true;
-            voiceStatus.textContent = 'Voice';
-            micIcon.classList.remove('text-red-500', 'animate-pulse');
-            showNotification('Microphone Access Denied', 'Please enable microphone permissions.');
-          } else if (event.error === 'no-speech') {
-            // no-speech is non-fatal on mobile; let onend auto-restart
-          } else if (event.error === 'aborted') {
-            // aborted can happen on mobile; let onend handle restart
-          }
-        };
-
-        recognition.onend = () => {
-          if (isListening && !manualStop) {
-            // Auto-restart after a short delay — mobile browsers throw
-            // InvalidStateError if start() is called synchronously in onend
-            voiceBaseText = descriptionField.value;
-            setTimeout(() => {
-              if (!isListening || manualStop) return;
-              try {
-                recognition.start();
-              } catch (e) {
-                isListening = false;
-                voiceStatus.textContent = 'Voice';
-                micIcon.classList.remove('text-red-500', 'animate-pulse');
-              }
-            }, 250);
-          } else {
-            isListening = false;
-            manualStop = false;
-            voiceStatus.textContent = 'Voice';
-            micIcon.classList.remove('text-red-500', 'animate-pulse');
-          }
-        };
-      } else {
-        // Hide voice button if not supported
-        voiceBtn.style.display = 'none';
-        console.warn('Speech recognition not supported in this browser');
-      }
+        // Reset base text when user clicks the voice button
+        voiceBtn.addEventListener('click', () => {
+          voiceBaseText = descriptionField.value;
+        });
+      })();
 
       // 3b. Voice-to-Text for Activity Type
       const voiceActivityBtn = document.getElementById('voice-activity-btn');
@@ -2695,72 +2742,20 @@
       const micIconActivity = document.getElementById('mic-icon-activity');
       const voiceActivityStatus = document.getElementById('voice-activity-status');
 
-      if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-        const SpeechRecognitionAT = window.SpeechRecognition || window.webkitSpeechRecognition;
-        const recognitionAT = new SpeechRecognitionAT();
-
-        recognitionAT.continuous = false;
-        recognitionAT.interimResults = true;
-        recognitionAT.lang = 'en-US';
-
-        let isListeningAT = false;
-        let manualStopAT = false;
-
-        voiceActivityBtn.addEventListener('click', () => {
-          if (isListeningAT) {
-            manualStopAT = true;
-            recognitionAT.stop();
-          } else {
-            manualStopAT = false;
-            recognitionAT.start();
-            isListeningAT = true;
-            voiceActivityStatus.textContent = 'Listening...';
-            micIconActivity.classList.add('text-red-500', 'animate-pulse');
-          }
-        });
-
-        recognitionAT.onresult = (event) => {
+      createVoiceRecognition({
+        button: voiceActivityBtn,
+        field: activityTypeField,
+        statusEl: voiceActivityStatus,
+        iconEl: micIconActivity,
+        continuous: false,
+        onTranscript: (event) => {
           let transcript = '';
           for (let i = 0; i < event.results.length; i++) {
             transcript += event.results[i][0].transcript;
           }
           activityTypeField.value = transcript;
-        };
-
-        recognitionAT.onerror = (event) => {
-          console.error('Speech recognition error (activity type):', event.error);
-          if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-            isListeningAT = false;
-            manualStopAT = true;
-            voiceActivityStatus.textContent = 'Voice';
-            micIconActivity.classList.remove('text-red-500', 'animate-pulse');
-            showNotification('Microphone Access Denied', 'Please enable microphone permissions.');
-          }
-        };
-
-        recognitionAT.onend = () => {
-          if (isListeningAT && !manualStopAT) {
-            // Auto-restart after a short delay for mobile compatibility
-            setTimeout(() => {
-              if (!isListeningAT || manualStopAT) return;
-              try {
-                recognitionAT.start();
-              } catch (e) {
-                isListeningAT = false;
-                voiceActivityStatus.textContent = 'Voice';
-                micIconActivity.classList.remove('text-red-500', 'animate-pulse');
-              }
-            }, 250);
-          } else {
-            isListeningAT = false;
-            manualStopAT = false;
-            voiceActivityStatus.textContent = 'Voice';
-            micIconActivity.classList.remove('text-red-500', 'animate-pulse');
-          }
-        };
-      } else {
-        voiceActivityBtn.style.display = 'none';
-      }
+        }
+      });
 
       // 4. Offline/Online Detection
       const offlineIndicator = document.getElementById('offline-indicator');
