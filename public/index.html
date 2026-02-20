@@ -2602,23 +2602,22 @@
         recognition.lang = 'en-US';
 
         let isListening = false;
+        let manualStop = false;
+        let voiceBaseText = '';
 
         voiceBtn.addEventListener('click', () => {
           if (isListening) {
+            manualStop = true;
             recognition.stop();
-            isListening = false;
-            voiceStatus.textContent = 'Voice';
-            micIcon.classList.remove('text-red-500', 'animate-pulse');
           } else {
             voiceBaseText = descriptionField.value;
+            manualStop = false;
             recognition.start();
             isListening = true;
-            voiceStatus.textContent = 'Click to stop recording';
+            voiceStatus.textContent = 'Listening...';
             micIcon.classList.add('text-red-500', 'animate-pulse');
           }
         });
-
-        let voiceBaseText = '';
 
         recognition.onresult = (event) => {
           let finalTranscript = '';
@@ -2639,25 +2638,47 @@
           } else {
             descriptionField.value = combined;
           }
+
+          // Save finalized text so it persists across auto-restarts
+          if (finalTranscript) {
+            voiceBaseText = descriptionField.value;
+          }
         };
 
         recognition.onerror = (event) => {
           console.error('Speech recognition error:', event.error);
-          isListening = false;
-          voiceStatus.textContent = 'Voice';
-          micIcon.classList.remove('text-red-500', 'animate-pulse');
-
-          if (event.error === 'no-speech') {
-            showNotification('No Speech Detected', 'Please try again and speak clearly.');
-          } else if (event.error === 'not-allowed') {
+          // For fatal errors, stop completely
+          if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+            isListening = false;
+            manualStop = true;
+            voiceStatus.textContent = 'Voice';
+            micIcon.classList.remove('text-red-500', 'animate-pulse');
             showNotification('Microphone Access Denied', 'Please enable microphone permissions.');
+          } else if (event.error === 'no-speech') {
+            // no-speech is non-fatal on mobile; let onend auto-restart
+          } else if (event.error === 'aborted') {
+            // aborted can happen on mobile; let onend handle restart
           }
         };
 
         recognition.onend = () => {
-          isListening = false;
-          voiceStatus.textContent = 'Voice';
-          micIcon.classList.remove('text-red-500', 'animate-pulse');
+          if (isListening && !manualStop) {
+            // Auto-restart: mobile browsers kill recognition prematurely
+            try {
+              voiceBaseText = descriptionField.value;
+              recognition.start();
+            } catch (e) {
+              // If restart fails, clean up
+              isListening = false;
+              voiceStatus.textContent = 'Voice';
+              micIcon.classList.remove('text-red-500', 'animate-pulse');
+            }
+          } else {
+            isListening = false;
+            manualStop = false;
+            voiceStatus.textContent = 'Voice';
+            micIcon.classList.remove('text-red-500', 'animate-pulse');
+          }
         };
       } else {
         // Hide voice button if not supported
@@ -2680,17 +2701,17 @@
         recognitionAT.lang = 'en-US';
 
         let isListeningAT = false;
+        let manualStopAT = false;
 
         voiceActivityBtn.addEventListener('click', () => {
           if (isListeningAT) {
+            manualStopAT = true;
             recognitionAT.stop();
-            isListeningAT = false;
-            voiceActivityStatus.textContent = 'Voice';
-            micIconActivity.classList.remove('text-red-500', 'animate-pulse');
           } else {
+            manualStopAT = false;
             recognitionAT.start();
             isListeningAT = true;
-            voiceActivityStatus.textContent = 'Click to stop recording';
+            voiceActivityStatus.textContent = 'Listening...';
             micIconActivity.classList.add('text-red-500', 'animate-pulse');
           }
         });
@@ -2705,21 +2726,31 @@
 
         recognitionAT.onerror = (event) => {
           console.error('Speech recognition error (activity type):', event.error);
-          isListeningAT = false;
-          voiceActivityStatus.textContent = 'Voice';
-          micIconActivity.classList.remove('text-red-500', 'animate-pulse');
-
-          if (event.error === 'no-speech') {
-            showNotification('No Speech Detected', 'Please try again and speak clearly.');
-          } else if (event.error === 'not-allowed') {
+          if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+            isListeningAT = false;
+            manualStopAT = true;
+            voiceActivityStatus.textContent = 'Voice';
+            micIconActivity.classList.remove('text-red-500', 'animate-pulse');
             showNotification('Microphone Access Denied', 'Please enable microphone permissions.');
           }
         };
 
         recognitionAT.onend = () => {
-          isListeningAT = false;
-          voiceActivityStatus.textContent = 'Voice';
-          micIconActivity.classList.remove('text-red-500', 'animate-pulse');
+          if (isListeningAT && !manualStopAT) {
+            // Auto-restart for mobile browsers that stop prematurely
+            try {
+              recognitionAT.start();
+            } catch (e) {
+              isListeningAT = false;
+              voiceActivityStatus.textContent = 'Voice';
+              micIconActivity.classList.remove('text-red-500', 'animate-pulse');
+            }
+          } else {
+            isListeningAT = false;
+            manualStopAT = false;
+            voiceActivityStatus.textContent = 'Voice';
+            micIconActivity.classList.remove('text-red-500', 'animate-pulse');
+          }
         };
       } else {
         voiceActivityBtn.style.display = 'none';
