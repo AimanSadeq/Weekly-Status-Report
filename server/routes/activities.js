@@ -106,7 +106,10 @@ router.get('/calendar', requireAuth, async (req, res) => {
         department: a.department,
         units: a.hours || a.units || 0,
         status: a.status,
-        name: a.name
+        name: a.name,
+        description: a.description || '',
+        email: a.email || '',
+        createdAt: a.createdAt || ''
       });
     });
 
