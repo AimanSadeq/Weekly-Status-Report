@@ -1,0 +1,2426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VIF Activity Tracker - Interactive Demo with Reports</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- React & ReactDOM -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  
+  <!-- Babel Standalone for JSX -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <!-- SheetJS for Excel Export -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+  
+  <style>
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+        'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+        sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    
+    #root {
+      min-height: 100vh;
+    }
+    
+    /* Loading animation */
+    .spinner {
+      border: 3px solid #f3f4f6;
+      border-top: 3px solid #5391D5;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Success notification */
+    .notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #5391D5;
+      color: white;
+      padding: 16px 24px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      z-index: 1000;
+      animation: slideIn 0.3s ease-out;
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateX(400px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    @media print {
+      .no-print {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    
+    // Simple Icon Components (inline SVG)
+    const Calendar = (props) => (
+      <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+    );
+    
+    const Users = (props) => (
+      <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+      </svg>
+    );
+    
+    const CheckCircle = (props) => (
+      <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    );
+    
+    const AlertCircle = (props) => (
+      <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    );
+    
+    const FileText = (props) => (
+      <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+    );
+    
+    const LogOut = (props) => (
+      <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+      </svg>
+    );
+    
+    const Plus = (props) => (
+      <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+      </svg>
+    );
+    
+    const Filter = (props) => (
+      <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+      </svg>
+    );
+    
+    const Download = (props) => (
+      <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+      </svg>
+    );
+    
+    const Mail = (props) => (
+      <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+      </svg>
+    );
+    
+    const Lock = (props) => (
+      <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+      </svg>
+    );
+    
+    const Building = (props) => (
+      <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+      </svg>
+    );
+    
+    const Activity = (props) => (
+      <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+      </svg>
+    );
+    
+    const TrendingUp = (props) => (
+      <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+      </svg>
+    );
+    
+    const Clock = (props) => (
+      <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    );
+    
+    const Bell = (props) => (
+      <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+      </svg>
+    );
+
+    const Trash = (props) => (
+      <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+      </svg>
+    );
+
+    const MessageCircle = (props) => (
+      <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+      </svg>
+    );
+
+    const ChevronDown = (props) => (
+      <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+      </svg>
+    );
+
+    const ChevronUp = (props) => (
+      <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+      </svg>
+    );
+
+    const X = (props) => (
+      <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    );
+
+    const BarChart = (props) => (
+      <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+      </svg>
+    );
+
+    // Notification Component
+    const Notification = ({ message, onClose }) => {
+      useEffect(() => {
+        const timer = setTimeout(onClose, 3000);
+        return () => clearTimeout(timer);
+      }, [onClose]);
+
+      return (
+        <div className="notification">
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-5 h-5" />
+            <span className="font-medium">{message}</span>
+          </div>
+        </div>
+      );
+    };
+
+    const VIFActivityTracker = () => {
+      // Generate week options (Sunday to Thursday) starting from one week before today through end of year
+      const generateWeekOptions = (year = 2025, startFromBeginning = false) => {
+        const weeks = [];
+        const yearInt = parseInt(year);
+        
+        // Get today's date
+        const today = new Date();
+        
+        // Go back one week from today
+        const oneWeekAgo = new Date(today);
+        oneWeekAgo.setDate(today.getDate() - 7);
+        
+        // Find the first Sunday of the year or the Sunday before Jan 1
+        const jan1 = new Date(yearInt, 0, 1);
+        const firstSunday = new Date(jan1);
+        const dayOfWeek = jan1.getDay();
+        
+        // If Jan 1 is not Sunday, go back to previous Sunday
+        if (dayOfWeek !== 0) {
+          firstSunday.setDate(jan1.getDate() - dayOfWeek);
+        }
+        
+        // Calculate which week number we should start from
+        let startWeekNum;
+        if (startFromBeginning) {
+          // For admin view, start from week 1
+          startWeekNum = 1;
+        } else {
+          // For employee view, start from one week before today
+          const daysSinceFirstSunday = Math.floor((oneWeekAgo - firstSunday) / (1000 * 60 * 60 * 24));
+          startWeekNum = Math.max(1, Math.floor(daysSinceFirstSunday / 7) + 1);
+        }
+        
+        // Generate weeks from startWeekNum to end of year (52-53 weeks)
+        for (let weekNum = startWeekNum; weekNum <= 53; weekNum++) {
+          const weekStart = new Date(firstSunday);
+          weekStart.setDate(firstSunday.getDate() + ((weekNum - 1) * 7));
+          
+          const weekEnd = new Date(weekStart);
+          weekEnd.setDate(weekStart.getDate() + 4); // Thursday (5-day work week)
+          
+          // Stop if we've gone past the end of the year
+          if (weekEnd.getFullYear() > yearInt) {
+            break;
+          }
+          
+          // Format dates
+          const formatDate = (date) => {
+            const month = date.getMonth() + 1;
+            const day = date.getDate();
+            const year = date.getFullYear();
+            return `${month}/${day}/${year}`;
+          };
+          
+          weeks.push({
+            value: weekEnd.toISOString().split('T')[0], // Store Thursday's date as value
+            label: `Week ${weekNum}: Sun ${formatDate(weekStart)} - Thu ${formatDate(weekEnd)}`,
+            weekNumber: weekNum,
+            year: yearInt,
+            startDate: weekStart.toISOString().split('T')[0],
+            endDate: weekEnd.toISOString().split('T')[0]
+          });
+        }
+        
+        return weeks;
+      };
+
+      const [currentView, setCurrentView] = useState('login');
+      const [currentUser, setCurrentUser] = useState(null);
+      const [email, setEmail] = useState('');
+      const [password, setPassword] = useState('');
+      const [selectedDepartment, setSelectedDepartment] = useState('');
+      const [selectedYear, setSelectedYear] = useState('2025');
+      const [selectedWeek, setSelectedWeek] = useState('');
+      const [selectedWeekNumber, setSelectedWeekNumber] = useState('');
+      const [activities, setActivities] = useState([]);
+      const [allActivities, setAllActivities] = useState([]);
+      const [showReviewModal, setShowReviewModal] = useState(false);
+      const [showReportsModal, setShowReportsModal] = useState(false);
+      const [showEmployeesModal, setShowEmployeesModal] = useState(false);
+      const [selectedActivity, setSelectedActivity] = useState(null);
+      const [feedback, setFeedback] = useState('');
+      const [notification, setNotification] = useState(null);
+      const [filters, setFilters] = useState({
+        year: '2025',
+        weekNumber: '',
+        weekEnding: '',
+        employee: 'all',
+        status: 'all',
+        department: 'all'
+      });
+      
+      // Week options for admin filters (separate from employee form)
+      const [filterWeekOptions, setFilterWeekOptions] = useState(() => generateWeekOptions(2025, true));
+      const [weekOptions, setWeekOptions] = useState(() => generateWeekOptions(2025));
+      const [formData, setFormData] = useState({
+        activityType: '',
+        unitsCompleted: '',
+        percentageComplete: '',
+        description: ''
+      });
+      const [showRecentReviews, setShowRecentReviews] = useState(true);
+
+      // Employee database
+      const employees = {
+        'aiman@viftraining.com': { name: 'Aiman', role: 'admin', departments: ['Management', 'Consultants'] },
+        'amal@viftraining.com': { name: 'Amal', role: 'employee', departments: ['Business Development', 'Consultants'] },
+        'ahmad@viftraining.com': { name: 'Ahmad', role: 'employee', departments: ['Operations', 'Consultants'] },
+        'rima@viftraining.com': { name: 'Rima', role: 'employee', departments: ['Operations'] },
+        'dalia@viftraining.com': { name: 'Dalia', role: 'employee', departments: ['Operations'] },
+        'yousef@viftraining.com': { name: 'Yousef', role: 'employee', departments: ['Consultants'] },
+        'mj@viftraining.com': { name: 'MJ', role: 'employee', departments: ['Finance'] },
+        'ibrahim@viftraining.com': { name: 'Ibrahim', role: 'employee', departments: ['Consultants'] },
+        'mufid@viftraining.com': { name: 'Mufid', role: 'employee', departments: ['Consultants'] },
+        'ammar@viftraining.com': { name: 'Ammar', role: 'employee', departments: ['Consultants'] },
+        'moayad@viftraining.com': { name: 'Moayad', role: 'employee', departments: ['Consultants'] },
+        'yassin@viftraining.com': { name: 'Yassin', role: 'employee', departments: ['Consultants'] },
+        'ali@viftraining.com': { name: 'Ali', role: 'employee', departments: ['Consultants'] },
+        'asaad@viftraining.com': { name: 'Asaad', role: 'employee', departments: ['Website & Digital Marketing'] },
+        'omar@viftraining.com': { name: 'Omar', role: 'employee', departments: ['Website & Digital Marketing', 'Consultants'] },
+        'alaa@viftraining.com': { name: 'Alaa', role: 'employee', departments: ['Operations'] },
+        'wael@viftraining.com': { name: 'Wael', role: 'employee', departments: ['Consultants'] }
+      };
+
+      // Mock activities for demo
+      const mockActivities = [
+        { id: 1, employee: 'Omar', email: 'omar@viftraining.com', department: 'Website & Digital Marketing', activity: 'Special Projects', units: 8, percentage: 100, status: 'submitted', week: '2025-10-02', description: 'Website redesign project', date: '2025-10-01' },
+        { id: 2, employee: 'Ahmad', email: 'ahmad@viftraining.com', department: 'Operations', activity: 'Special Projects', units: 5, percentage: 60, status: 'submitted', week: '2025-10-02', description: 'Working on process optimization', date: '2025-10-01' },
+        { id: 3, employee: 'Ali', email: 'ali@viftraining.com', department: 'Consultants', activity: 'Consulting', units: 12, percentage: 100, status: 'reviewed', week: '2025-10-02', description: 'Client consulting sessions completed', adminFeedback: 'Excellent work on the client project!', date: '2025-10-01' },
+        { id: 4, employee: 'Amal', email: 'amal@viftraining.com', department: 'Business Development', activity: 'Proposal Support', units: 3, percentage: 100, status: 'submitted', week: '2025-10-02', description: 'Prepared 3 client proposals', date: '2025-10-02' },
+        { id: 5, employee: 'Ammar', email: 'ammar@viftraining.com', department: 'Consultants', activity: 'Training (Billing Days)', units: 16, percentage: 100, status: 'reviewed', week: '2025-10-02', description: 'Delivered advanced leadership training', adminFeedback: 'Outstanding training delivery!', date: '2025-09-30' },
+        { id: 6, employee: 'Rima', email: 'rima@viftraining.com', department: 'Operations', activity: 'Client Support', units: 10, percentage: 80, status: 'submitted', week: '2025-10-02', description: 'Handled customer support tickets', date: '2025-10-01' },
+        { id: 7, employee: 'Dalia', email: 'dalia@viftraining.com', department: 'Operations', activity: 'Course Materials Design/Audit', units: 6, percentage: 75, status: 'draft', week: '2025-10-02', description: 'Reviewing course materials for Q4', date: '2025-10-02' },
+        { id: 8, employee: 'MJ', email: 'mj@viftraining.com', department: 'Finance', activity: 'Special Projects', units: 4, percentage: 50, status: 'draft', week: '2025-10-02', description: 'Financial analysis for Q4', date: '2025-10-02' },
+        { id: 9, employee: 'Yassin', email: 'yassin@viftraining.com', department: 'Consultants', activity: 'Coaching', units: 8, percentage: 100, status: 'reviewed', week: '2025-10-02', description: 'Executive coaching sessions', adminFeedback: 'Great progress with clients!', date: '2025-10-01' },
+        { id: 10, employee: 'Ibrahim', email: 'ibrahim@viftraining.com', department: 'Consultants', activity: 'Consulting', units: 10, percentage: 90, status: 'submitted', week: '2025-10-02', description: 'Strategic consulting for tech company', date: '2025-10-02' },
+      ];
+
+      // Activity types based on department
+      const getActivityTypes = (dept) => {
+        const consultantActivities = [
+          'Consulting', 'Clinic', 'Training (Billing Days)', 'Coaching', 'ITP',
+          'BSC - BDRM (Optional)', 'BSC - eLearning (Mandatory)', 
+          'BSC - New Courses (Mandatory)', 'BSC - Certifications (Mandatory)'
+        ];
+        const generalActivities = [
+          'Special Projects', 'Conference', 'Course Outline Support/Design',
+          'Proposal Support', 'Vacation', 'Sick', 'Consultant Support',
+          'Client Support', 'Course Materials Design/Audit', 'Personal Days Off'
+        ];
+        
+        return dept === 'Consultants' 
+          ? [...consultantActivities, ...generalActivities] 
+          : generalActivities;
+      };
+
+      // Set default week to current week on mount
+      useEffect(() => {
+        if (!selectedWeek && weekOptions.length > 0) {
+          // Find the current date's week in the selected year
+          const today = new Date();
+          const todayStr = today.toISOString().split('T')[0];
+          
+          // Find the week that contains today's date
+          const currentWeekOption = weekOptions.find(w => {
+            return todayStr >= w.startDate && todayStr <= w.endDate;
+          }) || weekOptions[0];
+          
+          setSelectedWeek(currentWeekOption.value);
+          setSelectedWeekNumber(currentWeekOption.weekNumber.toString());
+          setSelectedYear(currentWeekOption.year.toString());
+        }
+      }, [weekOptions]);
+
+      // Load activities from API when user changes
+      useEffect(() => {
+        if (currentUser) {
+          loadActivities();
+        }
+      }, [currentUser]);
+
+      // Restore session from localStorage on mount
+      useEffect(() => {
+        const savedSession = localStorage.getItem('vif_session');
+        if (savedSession) {
+          try {
+            const session = JSON.parse(savedSession);
+            const sessionAge = Date.now() - session.timestamp;
+            const ONE_DAY = 24 * 60 * 60 * 1000; // 24 hours
+
+            // Only restore if session is less than 24 hours old
+            if (sessionAge < ONE_DAY) {
+              setCurrentUser(session.user);
+              setCurrentView(session.view);
+              if (session.selectedDepartment) {
+                setSelectedDepartment(session.selectedDepartment);
+              }
+
+              // Fetch activities from API
+              const apiUrl = `http://localhost:3000/api/activities?email=${session.user.email}&role=${session.user.role}`;
+              fetch(apiUrl)
+                .then(res => res.json())
+                .then(data => {
+                  if (data.success && data.activities) {
+                    if (session.user.role === 'admin') {
+                      setAllActivities(data.activities);
+                    } else {
+                      setActivities(data.activities);
+                    }
+                  }
+                })
+                .catch(err => {
+                  console.log('Failed to fetch activities:', err.message);
+                  // Fallback to mock data if API fails
+                  if (session.user.role === 'admin') {
+                    setAllActivities(mockActivities);
+                  } else {
+                    setActivities(mockActivities.filter(a => a.email === session.user.email));
+                  }
+                });
+            } else {
+              // Session expired, clear it
+              localStorage.removeItem('vif_session');
+            }
+          } catch (error) {
+            console.error('Failed to restore session:', error);
+            localStorage.removeItem('vif_session');
+          }
+        }
+      }, []); // Empty dependency array = run once on mount
+
+      const showNotification = (message) => {
+        setNotification(message);
+      };
+
+      // Helper function to calculate week number directly from a date
+      const calculateWeekNumber = (dateStr, year = 2025) => {
+        if (!dateStr) return null;
+        
+        const date = new Date(dateStr);
+        const yearInt = typeof year === 'string' ? parseInt(year) : year;
+        
+        // Find the first Sunday of the year
+        const jan1 = new Date(yearInt, 0, 1);
+        const firstSunday = new Date(jan1);
+        const dayOfWeek = jan1.getDay();
+        
+        if (dayOfWeek !== 0) {
+          firstSunday.setDate(jan1.getDate() - dayOfWeek);
+        }
+        
+        // Calculate week number
+        const daysSinceFirstSunday = Math.floor((date - firstSunday) / (1000 * 60 * 60 * 24));
+        const weekNumber = Math.floor(daysSinceFirstSunday / 7) + 1;
+        
+        return weekNumber;
+      };
+
+      // Helper function to find week info for a given date
+      const findWeekInfo = (dateStr, weekOptionsArray) => {
+        if (!dateStr || !weekOptionsArray || weekOptionsArray.length === 0) return null;
+        
+        // First try exact match on the week ending value
+        let weekInfo = weekOptionsArray.find(w => w.value === dateStr);
+        if (weekInfo) return weekInfo;
+        
+        // If no exact match, check if the date falls within any week's range
+        weekInfo = weekOptionsArray.find(w => {
+          return dateStr >= w.startDate && dateStr <= w.endDate;
+        });
+        
+        return weekInfo;
+      };
+
+      // Handler for year change - regenerates week options and resets week selection
+      const handleYearChange = (year) => {
+        setSelectedYear(year);
+        const newWeekOptions = generateWeekOptions(year);
+        setWeekOptions(newWeekOptions);
+        // Reset to first week of the new year
+        if (newWeekOptions.length > 0) {
+          setSelectedWeek(newWeekOptions[0].value);
+          setSelectedWeekNumber(newWeekOptions[0].weekNumber.toString());
+        }
+      };
+
+      // Handler for week number change - updates week ending automatically
+      const handleWeekNumberChange = (weekNum) => {
+        setSelectedWeekNumber(weekNum);
+        const weekOption = weekOptions.find(w => w.weekNumber.toString() === weekNum && w.year.toString() === selectedYear);
+        if (weekOption) {
+          setSelectedWeek(weekOption.value);
+        }
+      };
+
+      // Handler for week ending change - updates week number and possibly year
+      const handleWeekEndingChange = (weekValue) => {
+        setSelectedWeek(weekValue);
+        const weekOption = weekOptions.find(w => w.value === weekValue);
+        if (weekOption) {
+          setSelectedWeekNumber(weekOption.weekNumber.toString());
+          // If the selected week is from a different year, update year too
+          if (weekOption.year.toString() !== selectedYear) {
+            setSelectedYear(weekOption.year.toString());
+            setWeekOptions(generateWeekOptions(weekOption.year));
+          }
+        }
+      };
+
+      // Export Functions
+      const exportToCSV = () => {
+        const filteredData = getFilteredActivities();
+        
+        if (filteredData.length === 0) {
+          alert('No activities to export with current filters');
+          return;
+        }
+
+        // CSV Headers
+        const headers = ['Employee', 'Email', 'Department', 'Activity Type', 'Description', 'Units', 'Percentage', 'Status', 'Week Ending', 'Admin Feedback'];
+        
+        // CSV Rows
+        const rows = filteredData.map(activity => [
+          activity.employee,
+          activity.email,
+          activity.department,
+          activity.activity,
+          activity.description || '',
+          activity.units || 0,
+          activity.percentage || 0,
+          activity.status,
+          activity.week,
+          activity.adminFeedback || ''
+        ]);
+
+        // Combine headers and rows
+        const csvContent = [
+          headers.join(','),
+          ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+        ].join('\n');
+
+        // Create blob and download
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        
+        const weekLabel = filters.weekEnding 
+          ? weekOptions.find(w => w.value === filters.weekEnding)?.label.replace(/[^a-zA-Z0-9]/g, '_') 
+          : 'All_Weeks';
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', `VIF_Activities_${weekLabel}_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        showNotification('CSV exported successfully!');
+      };
+
+      const exportToExcel = () => {
+        const filteredData = getFilteredActivities();
+        
+        if (filteredData.length === 0) {
+          alert('No activities to export with current filters');
+          return;
+        }
+
+        // Prepare data for Excel
+        const excelData = filteredData.map(activity => ({
+          'Employee': activity.employee,
+          'Email': activity.email,
+          'Department': activity.department,
+          'Activity Type': activity.activity,
+          'Description': activity.description || '',
+          'Units Completed': activity.units || 0,
+          'Percentage Complete': activity.percentage || 0,
+          'Status': activity.status,
+          'Week Ending': activity.week,
+          'Admin Feedback': activity.adminFeedback || ''
+        }));
+
+        // Create worksheet
+        const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+        // Set column widths
+        const columnWidths = [
+          { wch: 15 }, // Employee
+          { wch: 30 }, // Email
+          { wch: 25 }, // Department
+          { wch: 30 }, // Activity Type
+          { wch: 40 }, // Description
+          { wch: 12 }, // Units
+          { wch: 12 }, // Percentage
+          { wch: 12 }, // Status
+          { wch: 15 }, // Week Ending
+          { wch: 40 }  // Admin Feedback
+        ];
+        worksheet['!cols'] = columnWidths;
+
+        // Create workbook and add worksheet
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Activities');
+
+        // Generate filename
+        const weekLabel = filters.weekEnding 
+          ? weekOptions.find(w => w.value === filters.weekEnding)?.label.replace(/[^a-zA-Z0-9]/g, '_') 
+          : 'All_Weeks';
+        
+        const filename = `VIF_Activities_${weekLabel}_${new Date().toISOString().split('T')[0]}.xlsx`;
+
+        // Download file
+        XLSX.writeFile(workbook, filename);
+
+        showNotification('Excel file exported successfully!');
+      };
+
+      const exportWeeklyReport = () => {
+        const weekData = filters.weekEnding 
+          ? allActivities.filter(a => a.week === filters.weekEnding)
+          : allActivities;
+
+        if (weekData.length === 0) {
+          alert('No activities to include in report');
+          return;
+        }
+
+        const weekLabel = filters.weekEnding 
+          ? weekOptions.find(w => w.value === filters.weekEnding)?.label 
+          : 'All Weeks';
+
+        // Generate HTML report
+        const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>VIF Training - Weekly Activity Report</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f9fafb;
+    }
+    .header {
+      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      color: white;
+      padding: 30px;
+      border-radius: 8px;
+      margin-bottom: 30px;
+    }
+    .header h1 {
+      margin: 0 0 10px 0;
+      font-size: 28px;
+    }
+    .header p {
+      margin: 0;
+      opacity: 0.9;
+    }
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    .summary-card {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .summary-card h3 {
+      margin: 0 0 10px 0;
+      color: #6b7280;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .summary-card p {
+      margin: 0;
+      font-size: 32px;
+      font-weight: bold;
+      color: #111827;
+    }
+    .activities {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    .activities h2 {
+      background: #f3f4f6;
+      padding: 20px;
+      margin: 0;
+      font-size: 18px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th {
+      background: #f9fafb;
+      padding: 12px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 600;
+      color: #6b7280;
+      text-transform: uppercase;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    td {
+      padding: 12px;
+      border-bottom: 1px solid #f3f4f6;
+      font-size: 14px;
+    }
+    tr:hover {
+      background: #f9fafb;
+    }
+    .status {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .status-draft { background: #f3f4f6; color: #374151; }
+    .status-submitted { background: #fef3c7; color: #92400e; }
+    .status-reviewed { background: #d1fae5; color: #065f46; }
+    .footer {
+      margin-top: 30px;
+      padding: 20px;
+      text-align: center;
+      color: #6b7280;
+      font-size: 12px;
+    }
+    @media print {
+      body { background: white; }
+      .summary { page-break-inside: avoid; }
+      .activities { page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>VIF Training - Weekly Activity Report</h1>
+    <p>${weekLabel}</p>
+    <p>Generated on ${new Date().toLocaleDateString()}</p>
+  </div>
+
+  <div class="summary">
+    <div class="summary-card">
+      <h3>Total Activities</h3>
+      <p>${weekData.length}</p>
+    </div>
+    <div class="summary-card">
+      <h3>Draft</h3>
+      <p>${weekData.filter(a => a.status === 'draft').length}</p>
+    </div>
+    <div class="summary-card">
+      <h3>Submitted</h3>
+      <p>${weekData.filter(a => a.status === 'submitted').length}</p>
+    </div>
+    <div class="summary-card">
+      <h3>Reviewed</h3>
+      <p>${weekData.filter(a => a.status === 'reviewed').length}</p>
+    </div>
+  </div>
+
+  <div class="activities">
+    <h2>Activity Details</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Employee</th>
+          <th>Department</th>
+          <th>Activity</th>
+          <th>Description</th>
+          <th>Progress</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${weekData.map(activity => `
+          <tr>
+            <td><strong>${activity.employee}</strong><br><small style="color: #6b7280;">${activity.email}</small></td>
+            <td>${activity.department}</td>
+            <td>${activity.activity}</td>
+            <td>${activity.description || '-'}</td>
+            <td>
+              ${activity.units > 0 ? `${activity.units} units` : ''}
+              ${activity.units > 0 && activity.percentage > 0 ? '<br>' : ''}
+              ${activity.percentage > 0 ? `${activity.percentage}%` : ''}
+            </td>
+            <td><span class="status status-${activity.status}">${activity.status}</span></td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="footer">
+    <p>VIF Training - Employee Activity Tracking System</p>
+    <p>This report is confidential and intended for internal use only.</p>
+  </div>
+</body>
+</html>
+        `;
+
+        // Create blob and download
+        const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        
+        const weekFileName = filters.weekEnding 
+          ? weekOptions.find(w => w.value === filters.weekEnding)?.label.replace(/[^a-zA-Z0-9]/g, '_') 
+          : 'All_Weeks';
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', `VIF_Weekly_Report_${weekFileName}_${new Date().toISOString().split('T')[0]}.html`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        showNotification('Weekly report exported successfully!');
+      };
+
+      // Calculate summary statistics
+      const calculateSummaryStats = () => {
+        const filteredData = getFilteredActivities();
+        
+        // Employee Summary
+        const employeeStats = {};
+        filteredData.forEach(activity => {
+          if (!employeeStats[activity.email]) {
+            employeeStats[activity.email] = {
+              name: activity.employee,
+              email: activity.email,
+              totalActivities: 0,
+              draft: 0,
+              submitted: 0,
+              reviewed: 0,
+              totalUnits: 0,
+              avgCompletion: 0
+            };
+          }
+          employeeStats[activity.email].totalActivities++;
+          employeeStats[activity.email][activity.status]++;
+          employeeStats[activity.email].totalUnits += activity.units || 0;
+        });
+
+        // Calculate average completion
+        Object.values(employeeStats).forEach(emp => {
+          const activities = filteredData.filter(a => a.email === emp.email);
+          const totalPercentage = activities.reduce((sum, a) => sum + (a.percentage || 0), 0);
+          emp.avgCompletion = activities.length > 0 ? Math.round(totalPercentage / activities.length) : 0;
+        });
+
+        // Department Summary
+        const departmentStats = {};
+        filteredData.forEach(activity => {
+          if (!departmentStats[activity.department]) {
+            departmentStats[activity.department] = {
+              department: activity.department,
+              totalActivities: 0,
+              employees: new Set(),
+              draft: 0,
+              submitted: 0,
+              reviewed: 0
+            };
+          }
+          departmentStats[activity.department].totalActivities++;
+          departmentStats[activity.department].employees.add(activity.email);
+          departmentStats[activity.department][activity.status]++;
+        });
+
+        // Convert Set to count
+        Object.values(departmentStats).forEach(dept => {
+          dept.employeeCount = dept.employees.size;
+          delete dept.employees;
+        });
+
+        // Weekly Completion Rates
+        const weeklyStats = {};
+        allActivities.forEach(activity => {
+          if (!weeklyStats[activity.week]) {
+            weeklyStats[activity.week] = {
+              week: activity.week,
+              total: 0,
+              draft: 0,
+              submitted: 0,
+              reviewed: 0,
+              completionRate: 0
+            };
+          }
+          weeklyStats[activity.week].total++;
+          weeklyStats[activity.week][activity.status]++;
+        });
+
+        // Calculate completion rates
+        Object.values(weeklyStats).forEach(week => {
+          week.completionRate = week.total > 0 
+            ? Math.round(((week.submitted + week.reviewed) / week.total) * 100) 
+            : 0;
+        });
+
+        return {
+          employees: Object.values(employeeStats),
+          departments: Object.values(departmentStats),
+          weekly: Object.values(weeklyStats).sort((a, b) => b.week.localeCompare(a.week))
+        };
+      };
+
+      // Load activities from API
+      const loadActivities = async () => {
+        if (!currentUser) return;
+
+        try {
+          const apiUrl = `http://localhost:3000/api/activities?email=${currentUser.email}&role=${currentUser.role}`;
+          const response = await fetch(apiUrl);
+          const data = await response.json();
+
+          if (data.success && data.activities) {
+            if (currentUser.role === 'admin') {
+              setAllActivities(data.activities);
+              setActivities(data.activities); // Admin sees all
+            } else {
+              setActivities(data.activities);
+            }
+          }
+        } catch (error) {
+          console.error('Failed to load activities:', error);
+        }
+      };
+
+      const handleLogin = async (e) => {
+        e.preventDefault();
+        if (email.endsWith('@viftraining.com')) {
+          const user = employees[email];
+          if (user) {
+            const userData = { email, ...user };
+            setCurrentUser(userData);
+            const view = user.role === 'admin' ? 'admin' : 'dashboard';
+            setCurrentView(view);
+            if (user.departments.length === 1) {
+              setSelectedDepartment(user.departments[0]);
+            }
+
+            // Save session to localStorage
+            localStorage.setItem('vif_session', JSON.stringify({
+              user: userData,
+              view: view,
+              selectedDepartment: user.departments.length === 1 ? user.departments[0] : '',
+              timestamp: Date.now()
+            }));
+
+            // Load activities from API after setting user
+            try {
+              const apiUrl = `http://localhost:3000/api/activities?email=${userData.email}&role=${userData.role}`;
+              const response = await fetch(apiUrl);
+              const data = await response.json();
+
+              if (data.success && data.activities) {
+                if (userData.role === 'admin') {
+                  setAllActivities(data.activities);
+                  setActivities(data.activities);
+                } else {
+                  setActivities(data.activities);
+                }
+              }
+            } catch (error) {
+              console.error('Failed to load activities:', error);
+            }
+
+            showNotification(`Welcome ${user.name}!`);
+          } else {
+            alert('User not found. Try: asadeq@viftraining.com or omar@viftraining.com');
+          }
+        } else {
+          alert('Please use @viftraining.com email');
+        }
+      };
+
+      const handleAddActivity = async (e) => {
+        e.preventDefault();
+
+        const newActivity = {
+          employee: currentUser.name,
+          email: currentUser.email,
+          department: selectedDepartment,
+          activity: formData.activityType,
+          units: parseInt(formData.unitsCompleted) || 0,
+          percentage: parseInt(formData.percentageComplete) || 0,
+          description: formData.description,
+          week: selectedWeek,
+          date: new Date().toLocaleDateString()
+        };
+
+        try {
+          const response = await fetch('http://localhost:3000/api/activities', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newActivity)
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            // Refresh activities from server
+            await loadActivities();
+
+            setFormData({
+              activityType: '',
+              unitsCompleted: '',
+              percentageComplete: '',
+              description: ''
+            });
+
+            showNotification('Activity added successfully!');
+          } else {
+            showNotification('Failed to add activity');
+          }
+        } catch (error) {
+          console.error('Error adding activity:', error);
+          showNotification('Failed to add activity');
+        }
+      };
+
+      const handleDeleteActivity = async (id) => {
+        if (confirm('Are you sure you want to delete this activity?')) {
+          try {
+            const response = await fetch(`http://localhost:3000/api/activities/${id}`, {
+              method: 'DELETE'
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+              await loadActivities();
+              showNotification('Activity deleted!');
+            } else {
+              showNotification('Failed to delete activity');
+            }
+          } catch (error) {
+            console.error('Error deleting activity:', error);
+            showNotification('Failed to delete activity');
+          }
+        }
+      };
+
+      const handleSubmitWeek = async () => {
+        try {
+          const response = await fetch('http://localhost:3000/api/activities/submit-week', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: currentUser.email,
+              week: selectedWeek
+            })
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            await loadActivities();
+            const weekLabel = weekOptions.find(w => w.value === selectedWeek)?.label || 'this week';
+            showNotification(`${data.message || `Activities for ${weekLabel} submitted successfully!`}`);
+          } else {
+            showNotification('Failed to submit activities');
+          }
+        } catch (error) {
+          console.error('Error submitting week:', error);
+          showNotification('Failed to submit activities');
+        }
+      };
+
+      const handleReview = (activity) => {
+        setSelectedActivity(activity);
+        setFeedback(activity.adminFeedback || '');
+        setShowReviewModal(true);
+      };
+
+      const handleSaveReview = async () => {
+        try {
+          const response = await fetch(`http://localhost:3000/api/activities/${selectedActivity.id}/review`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              adminFeedback: feedback,
+              adminName: currentUser.name
+            })
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            await loadActivities();
+            setShowReviewModal(false);
+            setSelectedActivity(null);
+            setFeedback('');
+            showNotification('Review saved successfully! Employee will be notified.');
+          } else {
+            showNotification('Failed to save review');
+          }
+        } catch (error) {
+          console.error('Error saving review:', error);
+          showNotification('Failed to save review');
+        }
+      };
+
+      const handleLogout = () => {
+        // Clear localStorage session
+        localStorage.removeItem('vif_session');
+
+        setCurrentUser(null);
+        setCurrentView('login');
+        setEmail('');
+        setPassword('');
+        setActivities([]);
+        setAllActivities([]);
+        setSelectedDepartment('');
+        showNotification('Logged out successfully!');
+      };
+
+      const handleFilterChange = (filterName, value) => {
+        setFilters(prev => ({ ...prev, [filterName]: value }));
+      };
+
+      // Admin filter: Year change handler
+      const handleFilterYearChange = (year) => {
+        const newWeekOptions = generateWeekOptions(year, true);
+        setFilterWeekOptions(newWeekOptions);
+        setFilters(prev => ({ ...prev, year: year, weekNumber: '', weekEnding: '' }));
+      };
+
+      // Synchronized filter handlers for week selection
+      const handleFilterWeekNumberChange = (weekNum) => {
+        const weekOption = filterWeekOptions.find(w => w.weekNumber.toString() === weekNum && w.year.toString() === filters.year);
+        if (weekOption) {
+          setFilters(prev => ({ ...prev, weekNumber: weekNum, weekEnding: weekOption.value }));
+        } else {
+          setFilters(prev => ({ ...prev, weekNumber: weekNum, weekEnding: '' }));
+        }
+      };
+
+      const handleFilterWeekEndingChange = (weekValue) => {
+        const weekOption = filterWeekOptions.find(w => w.value === weekValue);
+        if (weekOption) {
+          setFilters(prev => ({ ...prev, weekEnding: weekValue, weekNumber: weekOption.weekNumber.toString() }));
+          // If selected week is from different year, update year too
+          if (weekOption.year.toString() !== filters.year) {
+            const newWeekOptions = generateWeekOptions(weekOption.year);
+            setFilterWeekOptions(newWeekOptions);
+            setFilters(prev => ({ ...prev, year: weekOption.year.toString(), weekEnding: weekValue, weekNumber: weekOption.weekNumber.toString() }));
+          }
+        } else {
+          setFilters(prev => ({ ...prev, weekEnding: weekValue, weekNumber: '' }));
+        }
+      };
+
+      const handleResetFilters = () => {
+        setFilters({
+          year: '2025',
+          weekNumber: '',
+          weekEnding: '',
+          employee: 'all',
+          status: 'all',
+          department: 'all'
+        });
+        setFilterWeekOptions(generateWeekOptions(2025, true));
+        showNotification('Filters reset!');
+      };
+
+      // Filter activities based on current filters
+      const getFilteredActivities = () => {
+        return allActivities.filter(activity => {
+          if (filters.weekEnding && activity.week !== filters.weekEnding) {
+            return false;
+          }
+          
+          if (filters.employee !== 'all' && activity.email !== filters.employee) {
+            return false;
+          }
+          
+          if (filters.status !== 'all' && activity.status !== filters.status) {
+            return false;
+          }
+          
+          if (filters.department !== 'all' && activity.department !== filters.department) {
+            return false;
+          }
+          
+          return true;
+        });
+      };
+
+      // Get unique values for filter dropdowns
+      const getUniqueEmployees = () => {
+        const unique = [...new Set(allActivities.map(a => ({ email: a.email, name: a.employee })))];
+        return Array.from(new Map(unique.map(item => [item.email, item])).values());
+      };
+
+      const getUniqueDepartments = () => {
+        return [...new Set(allActivities.map(a => a.department))];
+      };
+
+      // Calculate statistics
+      const filteredActivities = currentView === 'admin' ? getFilteredActivities() : allActivities;
+      
+      const stats = {
+        totalEmployees: Object.keys(employees).length,
+        submittedThisWeek: filteredActivities.filter(a => a.status === 'submitted' || a.status === 'reviewed').length,
+        pendingReview: filteredActivities.filter(a => a.status === 'submitted').length,
+        reviewed: filteredActivities.filter(a => a.status === 'reviewed').length
+      };
+
+      // Login View
+      if (currentView === 'login') {
+        return (
+          <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#FEFFF9] via-[#5391D5]/5 to-[#5391D5]/10 p-4">
+            {notification && <Notification message={notification} onClose={() => setNotification(null)} />}
+
+            <div className="max-w-md w-full">
+              <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+                <div className="bg-gradient-to-r from-[#010131] to-[#111232] px-8 py-6">
+                  <div className="text-center">
+                    <div className="mx-auto mb-4 flex items-center justify-center">
+                      <img src="/vifm-logo-white.png" alt="VIFM Logo" className="h-16 w-auto" style={{filter: 'invert(1) brightness(2)'}} />
+                    </div>
+                    <p className="text-[#FEFFF9]/90">Employee Activity Tracking System</p>
+                  </div>
+                </div>
+                
+                <div className="px-8 py-6">
+                  <form onSubmit={handleLogin} className="space-y-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <Mail className="w-4 h-4 inline mr-1" />
+                        Email Address
+                      </label>
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5391D5] transition-all"
+                        placeholder="your.name@viftraining.com"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <Lock className="w-4 h-4 inline mr-1" />
+                        Password
+                      </label>
+                      <input
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5391D5] transition-all"
+                        placeholder="Enter your password"
+                        required
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="w-full py-3 px-4 bg-gradient-to-r from-[#010131] to-[#111232] hover:from-[#111232] hover:to-[#121140] text-white font-medium rounded-lg transition-all transform hover:scale-[1.02] shadow-lg"
+                    >
+                      Sign In
+                    </button>
+                  </form>
+                  
+                  <div className="mt-6">
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                      <p className="text-xs font-semibold text-amber-800 mb-3 flex items-center">
+                        <Bell className="w-4 h-4 mr-1" />
+                        Try These Demo Accounts:
+                      </p>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-gray-700 font-medium">Admin Access:</span>
+                          <code className="bg-amber-100 px-2 py-1 rounded text-amber-800">aiman@viftraining.com</code>
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-gray-700 font-medium">Employee Access:</span>
+                          <code className="bg-amber-100 px-2 py-1 rounded text-amber-800">omar@viftraining.com</code>
+                        </div>
+                      </div>
+                      <p className="text-xs text-amber-600 mt-2 text-center">(Any password works for demo)</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-4 text-center">
+                <p className="text-sm text-gray-600 mb-2">Fully Interactive Demo with Export & Reporting!</p>
+                <p className="text-xs text-gray-500">CSV, Excel, HTML reports + analytics - all features working</p>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // Employee Dashboard View
+      if (currentView === 'dashboard') {
+        return (
+          <div className="min-h-screen bg-gray-50">
+            {notification && <Notification message={notification} onClose={() => setNotification(null)} />}
+            
+            <header className="bg-white shadow-sm border-b border-gray-200">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="flex justify-between items-center py-4">
+                  <div>
+                    <h1 className="text-2xl font-bold text-gray-900">Employee Dashboard</h1>
+                    <p className="text-sm text-gray-600 mt-1">Welcome back, {currentUser?.name}</p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    {selectedWeek && weekOptions.length > 0 && (
+                      <span className="text-sm text-gray-500">
+                        {selectedYear} - {weekOptions.find(w => w.value === selectedWeek)?.label || 'Select a week'}
+                      </span>
+                    )}
+                    <button
+                      onClick={handleLogout}
+                      className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Sign Out
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </header>
+
+            {/* Unread Reviews Alert */}
+            {activities.filter(a => a.status === 'reviewed' && a.feedbackRead === false).length > 0 && (
+              <div className="bg-gradient-to-r from-[#5391D5] to-[#5391D5]/80 border-l-4 border-[#010131]">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Bell className="w-5 h-5 text-white animate-pulse" />
+                      <p className="text-white font-medium">
+                        You have {activities.filter(a => a.status === 'reviewed' && a.feedbackRead === false).length} new review
+                        {activities.filter(a => a.status === 'reviewed' && a.feedbackRead === false).length !== 1 ? 's' : ''} from your manager
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        // Mark all as read
+                        activities.filter(a => a.status === 'reviewed' && a.feedbackRead === false).forEach(activity => {
+                          fetch(`http://localhost:3000/api/activities/${activity.id}/mark-read`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' }
+                          }).then(() => {
+                            setActivities(prev => prev.map(a =>
+                              a.id === activity.id ? {...a, feedbackRead: true} : a
+                            ));
+                          });
+                        });
+                      }}
+                      className="text-white hover:text-[#FEFFF9] text-sm font-medium underline"
+                    >
+                      Mark all as read
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Activity Entry Form */}
+                <div className="lg:col-span-2">
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="bg-[#5391D5]/10 rounded-lg p-2">
+                        <Calendar className="w-5 h-5 text-[#5391D5]" />
+                      </div>
+                      <h2 className="text-lg font-semibold text-gray-900">Add Weekly Activity</h2>
+                    </div>
+                    
+                    <form onSubmit={handleAddActivity} className="space-y-4">
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <Calendar className="w-4 h-4 inline mr-1" />
+                            Year
+                          </label>
+                          <select
+                            value={selectedYear}
+                            onChange={(e) => handleYearChange(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                            required
+                          >
+                            <option value="2024">2024</option>
+                            <option value="2025">2025</option>
+                            <option value="2026">2026</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Week Number
+                          </label>
+                          <select
+                            value={selectedWeekNumber}
+                            onChange={(e) => handleWeekNumberChange(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                            required
+                          >
+                            <option value="">Select Week</option>
+                            {weekOptions.map((week, index) => (
+                              <option key={index} value={week.weekNumber}>
+                                Week {week.weekNumber}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Week Ending (Thursday)
+                          </label>
+                          <select
+                            value={selectedWeek}
+                            onChange={(e) => handleWeekEndingChange(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                            required
+                          >
+                            <option value="">Select Date</option>
+                            {weekOptions.map((week, index) => (
+                              <option key={index} value={week.value}>
+                                {week.label.split(': ')[1]}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                      
+                      {currentUser?.departments && currentUser.departments.length > 1 && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
+                          <select
+                            value={selectedDepartment}
+                            onChange={(e) => setSelectedDepartment(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                            required
+                          >
+                            <option value="">Select Department</option>
+                            {currentUser.departments.map(dept => (
+                              <option key={dept} value={dept}>{dept}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Activity Type</label>
+                        <select
+                          value={formData.activityType}
+                          onChange={(e) => setFormData({...formData, activityType: e.target.value})}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                          required
+                          disabled={!selectedDepartment}
+                        >
+                          <option value="">Select Activity Type</option>
+                          {selectedDepartment && getActivityTypes(selectedDepartment).map(type => (
+                            <option key={type} value={type}>{type}</option>
+                          ))}
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                        <textarea
+                          value={formData.description}
+                          onChange={(e) => setFormData({...formData, description: e.target.value})}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                          rows="3"
+                          placeholder="Describe your activity..."
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Units Completed</label>
+                          <input
+                            type="number"
+                            value={formData.unitsCompleted}
+                            onChange={(e) => setFormData({...formData, unitsCompleted: e.target.value})}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                            min="0"
+                            placeholder="0"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">% Complete</label>
+                          <input
+                            type="number"
+                            value={formData.percentageComplete}
+                            onChange={(e) => setFormData({...formData, percentageComplete: e.target.value})}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                            min="0"
+                            max="100"
+                            placeholder="0"
+                          />
+                        </div>
+                      </div>
+                      
+                      <button
+                        type="submit"
+                        className="w-full py-2 px-4 bg-[#010131] hover:bg-[#111232] text-white font-medium rounded-lg transition-all flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={!selectedWeek || !selectedDepartment || !formData.activityType}
+                      >
+                        <Plus className="w-4 h-4" />
+                        Add Activity
+                      </button>
+                    </form>
+                  </div>
+                </div>
+                
+                {/* This Week's Activities */}
+                <div>
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        {selectedYear} - {selectedWeek ? weekOptions.find(w => w.value === selectedWeek)?.label.split(':')[0] : 'Select Week'}'s Activities
+                      </h3>
+                      {activities.filter(a => a.status === 'draft' && a.week === selectedWeek).length > 0 && (
+                        <button 
+                          onClick={handleSubmitWeek}
+                          className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm"
+                        >
+                          Submit Week
+                        </button>
+                      )}
+                    </div>
+                    
+                    {activities.filter(a => a.week === selectedWeek).length === 0 ? (
+                      <div className="text-center py-8">
+                        <Activity className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                        <p className="text-gray-500 text-sm">No activities for this week yet</p>
+                        <p className="text-gray-400 text-xs mt-1">Add your first activity to get started</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {activities.filter(a => a.week === selectedWeek).map(activity => (
+                          <div key={activity.id} className="border border-gray-200 rounded-lg p-4 hover:border-indigo-300 transition-colors">
+                            <div className="flex justify-between items-start mb-2">
+                              <div className="flex-1">
+                                <p className="font-medium text-sm text-gray-900">{activity.activity}</p>
+                                <p className="text-xs text-gray-500 mt-0.5">{activity.department}</p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                  activity.status === 'submitted' ? 'bg-yellow-100 text-yellow-700' :
+                                  activity.status === 'reviewed' ? 'bg-green-100 text-green-700' :
+                                  'bg-gray-100 text-gray-700'
+                                }`}>
+                                  {activity.status}
+                                </span>
+                                {activity.status === 'reviewed' && activity.feedbackRead === false && (
+                                  <span className="px-2 py-1 text-xs font-bold rounded-full bg-gradient-to-r from-[#5391D5] to-[#5391D5]/80 text-white animate-pulse shadow-md">
+                                    NEW FEEDBACK
+                                  </span>
+                                )}
+                                {activity.status === 'draft' && (
+                                  <button
+                                    onClick={() => handleDeleteActivity(activity.id)}
+                                    className="text-red-600 hover:text-red-700 p-1"
+                                    title="Delete activity"
+                                  >
+                                    <Trash className="w-4 h-4" />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                            {activity.description && (
+                              <p className="text-xs text-gray-600 mb-2">{activity.description}</p>
+                            )}
+                            <div className="flex gap-4 text-xs text-gray-500">
+                              {activity.units > 0 && (
+                                <span className="flex items-center gap-1">
+                                  <CheckCircle className="w-3 h-3" />
+                                  {activity.units} units
+                                </span>
+                              )}
+                              {activity.percentage > 0 && (
+                                <span className="flex items-center gap-1">
+                                  <TrendingUp className="w-3 h-3" />
+                                  {activity.percentage}%
+                                </span>
+                              )}
+                            </div>
+                            {activity.adminFeedback && (
+                              <div
+                                className={`mt-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                                  activity.feedbackRead === false
+                                    ? 'bg-gradient-to-r from-[#5391D5]/10 to-[#5391D5]/5 border-[#5391D5] shadow-md animate-pulse'
+                                    : 'bg-blue-50 border-transparent'
+                                }`}
+                                onClick={() => {
+                                  if (activity.feedbackRead === false) {
+                                    fetch(`http://localhost:3000/api/activities/${activity.id}/mark-read`, {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' }
+                                    }).then(() => {
+                                      setActivities(prev => prev.map(a =>
+                                        a.id === activity.id ? {...a, feedbackRead: true} : a
+                                      ));
+                                      setNotification('Feedback marked as read');
+                                    });
+                                  }
+                                }}
+                              >
+                                <div className="flex items-center justify-between mb-1">
+                                  <p className="text-xs font-medium text-blue-800">Admin Feedback:</p>
+                                  {activity.feedbackRead === false && (
+                                    <span className="text-xs text-[#5391D5] font-bold">Click to mark as read</span>
+                                  )}
+                                </div>
+                                <p className="text-xs text-blue-700">{activity.adminFeedback}</p>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </main>
+
+            {/* Recent Reviews Section */}
+            {activities.filter(a => a.status === 'reviewed').length > 0 && (
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-0 pb-8">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-green-100 rounded-lg p-2">
+                        <CheckCircle className="w-5 h-5 text-green-600" />
+                      </div>
+                      <div>
+                        <h2 className="text-lg font-semibold text-gray-900">Recent Reviews</h2>
+                        <p className="text-xs text-gray-500">
+                          {activities.filter(a => a.status === 'reviewed' && a.feedbackRead === false).length > 0 ? (
+                            <span className="text-[#5391D5] font-medium">
+                              {activities.filter(a => a.status === 'reviewed' && a.feedbackRead === false).length} new feedback
+                            </span>
+                          ) : (
+                            'Feedback from your manager'
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setShowRecentReviews(!showRecentReviews)}
+                      className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                      title={showRecentReviews ? 'Hide reviews' : 'Show reviews'}
+                    >
+                      {showRecentReviews ? (
+                        <ChevronUp className="w-5 h-5 text-gray-600" />
+                      ) : (
+                        <ChevronDown className="w-5 h-5 text-gray-600" />
+                      )}
+                    </button>
+                  </div>
+
+                  {showRecentReviews && (
+
+                  <div className="space-y-3">
+                    {activities
+                      .filter(a => a.status === 'reviewed')
+                      .sort((a, b) => {
+                        // Sort unread first, then by date
+                        if (a.feedbackRead === false && b.feedbackRead !== false) return -1;
+                        if (a.feedbackRead !== false && b.feedbackRead === false) return 1;
+                        return (b.reviewedAt || '').localeCompare(a.reviewedAt || '');
+                      })
+                      .slice(0, 5) // Show only last 5 reviews
+                      .map(activity => (
+                        <div
+                          key={activity.id}
+                          className={`border-2 rounded-lg p-4 transition-all ${
+                            activity.feedbackRead === false
+                              ? 'border-[#5391D5] bg-gradient-to-r from-[#5391D5]/5 to-[#5391D5]/10 shadow-md'
+                              : 'border-gray-200 bg-gray-50'
+                          }`}
+                        >
+                          <div className="flex justify-between items-start mb-3">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <p className="font-medium text-sm text-gray-900">{activity.activity}</p>
+                                {activity.feedbackRead === false && (
+                                  <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-[#5391D5] to-[#5391D5]/80 text-white animate-pulse">
+                                    NEW
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-gray-500">
+                                {activity.department} • Week {activity.week ? new Date(activity.week).toLocaleDateString() : 'N/A'}
+                              </p>
+                            </div>
+                            <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700">
+                              Reviewed
+                            </span>
+                          </div>
+
+                          {activity.description && (
+                            <p className="text-xs text-gray-600 mb-2">{activity.description}</p>
+                          )}
+
+                          <div className="flex gap-4 text-xs text-gray-500 mb-3">
+                            {activity.units > 0 && (
+                              <span className="flex items-center gap-1">
+                                <CheckCircle className="w-3 h-3" />
+                                {activity.units} units
+                              </span>
+                            )}
+                            {activity.percentage > 0 && (
+                              <span className="flex items-center gap-1">
+                                <TrendingUp className="w-3 h-3" />
+                                {activity.percentage}%
+                              </span>
+                            )}
+                          </div>
+
+                          {activity.adminFeedback && (
+                            <div
+                              className={`p-3 rounded-lg cursor-pointer transition-all ${
+                                activity.feedbackRead === false
+                                  ? 'bg-white border-2 border-[#5391D5]'
+                                  : 'bg-white border border-gray-200'
+                              }`}
+                              onClick={() => {
+                                if (activity.feedbackRead === false) {
+                                  fetch(`http://localhost:3000/api/activities/${activity.id}/mark-read`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' }
+                                  }).then(() => {
+                                    setActivities(prev => prev.map(a =>
+                                      a.id === activity.id ? {...a, feedbackRead: true} : a
+                                    ));
+                                    showNotification('Feedback marked as read');
+                                  });
+                                }
+                              }}
+                            >
+                              <div className="flex items-start gap-2">
+                                <MessageCircle className="w-4 h-4 text-[#5391D5] mt-0.5 flex-shrink-0" />
+                                <div className="flex-1">
+                                  <p className="text-xs font-medium text-gray-700 mb-1">Manager Feedback:</p>
+                                  <p className="text-xs text-gray-600">{activity.adminFeedback}</p>
+                                  {activity.feedbackRead === false && (
+                                    <p className="text-xs text-[#5391D5] font-medium mt-2">Click to mark as read</p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      // Admin Dashboard View
+      if (currentView === 'admin') {
+        const summaryStats = calculateSummaryStats();
+
+        return (
+          <div className="min-h-screen bg-gray-50">
+            {notification && <Notification message={notification} onClose={() => setNotification(null)} />}
+            
+            <header className="bg-white shadow-sm border-b border-gray-200">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="flex justify-between items-center py-4">
+                  <div>
+                    <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+                    <p className="text-sm text-gray-600 mt-1">Review and manage employee activities</p>
+                  </div>
+                  <div className="flex gap-3">
+                    <button 
+                      onClick={() => setShowReportsModal(true)}
+                      className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors shadow-sm"
+                    >
+                      <BarChart className="w-4 h-4" />
+                      Summary Reports
+                    </button>
+                    <button 
+                      onClick={exportWeeklyReport}
+                      className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      <FileText className="w-4 h-4" />
+                      Weekly Report
+                    </button>
+                    <button 
+                      onClick={exportToExcel}
+                      className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#5391D5] hover:bg-[#5391D5]/90 rounded-lg transition-colors shadow-sm"
+                    >
+                      <Download className="w-4 h-4" />
+                      Export Excel
+                    </button>
+                    <button
+                      onClick={exportToCSV}
+                      className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      <Download className="w-4 h-4" />
+                      Export CSV
+                    </button>
+                    <button
+                      onClick={() => setShowEmployeesModal(true)}
+                      className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#010131] hover:bg-[#111232] rounded-lg transition-colors shadow-sm"
+                    >
+                      <Users className="w-4 h-4" />
+                      Employees Admin
+                    </button>
+                    <button
+                      onClick={handleLogout}
+                      className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Sign Out
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </header>
+
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+              {/* Stats Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Total Employees</p>
+                      <p className="text-3xl font-bold text-gray-900 mt-1">{stats.totalEmployees}</p>
+                    </div>
+                    <div className="bg-[#010131]/10 rounded-lg p-3">
+                      <Users className="w-6 h-6 text-[#010131]" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Submitted</p>
+                      <p className="text-3xl font-bold text-[#5391D5] mt-1">{stats.submittedThisWeek}</p>
+                    </div>
+                    <div className="bg-[#5391D5]/10 rounded-lg p-3">
+                      <CheckCircle className="w-6 h-6 text-[#5391D5]" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Pending Review</p>
+                      <p className="text-3xl font-bold text-yellow-600 mt-1">{stats.pendingReview}</p>
+                    </div>
+                    <div className="bg-yellow-100 rounded-lg p-3">
+                      <Clock className="w-6 h-6 text-yellow-600" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Reviewed</p>
+                      <p className="text-3xl font-bold text-[#111232] mt-1">{stats.reviewed}</p>
+                    </div>
+                    <div className="bg-[#111232]/10 rounded-lg p-3">
+                      <FileText className="w-6 h-6 text-[#111232]" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Filters */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                    <Filter className="w-4 h-4" />
+                    Filter Activities
+                  </h3>
+                  <span className="text-xs text-gray-500">
+                    Showing {filteredActivities.length} of {allActivities.length} activities
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Year</label>
+                    <select
+                      value={filters.year}
+                      onChange={(e) => handleFilterYearChange(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                      <option value="2024">2024</option>
+                      <option value="2025">2025</option>
+                      <option value="2026">2026</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Week Number</label>
+                    <select
+                      value={filters.weekNumber}
+                      onChange={(e) => handleFilterWeekNumberChange(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                      <option value="">All Weeks</option>
+                      {filterWeekOptions.map((week, index) => (
+                        <option key={index} value={week.weekNumber}>
+                          Week {week.weekNumber}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Week Ending</label>
+                    <select
+                      value={filters.weekEnding}
+                      onChange={(e) => handleFilterWeekEndingChange(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                      <option value="">All Weeks</option>
+                      {filterWeekOptions.map((week, index) => (
+                        <option key={index} value={week.value}>
+                          {week.label.split(': ')[1]}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Employee</label>
+                    <select 
+                      value={filters.employee}
+                      onChange={(e) => handleFilterChange('employee', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                      <option value="all">All Employees</option>
+                      {getUniqueEmployees().map(emp => (
+                        <option key={emp.email} value={emp.email}>{emp.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
+                    <select 
+                      value={filters.department}
+                      onChange={(e) => handleFilterChange('department', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                      <option value="all">All Departments</option>
+                      {getUniqueDepartments().map(dept => (
+                        <option key={dept} value={dept}>{dept}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                    <select 
+                      value={filters.status}
+                      onChange={(e) => handleFilterChange('status', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                      <option value="all">All Status</option>
+                      <option value="draft">Draft</option>
+                      <option value="submitted">Submitted</option>
+                      <option value="reviewed">Reviewed</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="mt-4 flex justify-end">
+                  <button 
+                    onClick={handleResetFilters}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center gap-2 transition-colors"
+                  >
+                    <Filter className="w-4 h-4" />
+                    Reset Filters
+                  </button>
+                </div>
+              </div>
+
+              {/* Activities Table */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-200">
+                  <h3 className="text-base font-semibold text-gray-900">All Employee Activities</h3>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Employee</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Department</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Activity Type</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Progress</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 bg-white">
+                      {filteredActivities.length === 0 ? (
+                        <tr>
+                          <td colSpan="6" className="px-4 py-6 text-center">
+                            <div className="flex flex-col items-center gap-2">
+                              <AlertCircle className="w-10 h-10 text-gray-400" />
+                              <p className="text-sm text-gray-500">No activities match your filters</p>
+                              <button
+                                onClick={handleResetFilters}
+                                className="mt-2 text-xs text-indigo-600 hover:text-indigo-700 font-medium"
+                              >
+                                Reset filters to see all activities
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredActivities.map(activity => (
+                          <tr key={activity.id} className="hover:bg-gray-50 transition-colors">
+                            <td className="px-3 py-2.5 whitespace-nowrap">
+                              <div className="text-xs font-medium text-gray-900">{activity.employee}</div>
+                              <div className="text-xs text-gray-400">{activity.email}</div>
+                            </td>
+                            <td className="px-3 py-2.5 whitespace-nowrap text-xs text-gray-600">{activity.department}</td>
+                            <td className="px-3 py-2.5 text-xs text-gray-600">
+                              <div className="max-w-xs">
+                                <p className="font-medium text-gray-900">{activity.activity}</p>
+                                {activity.description && (
+                                  <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">{activity.description}</p>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-3 py-2.5 whitespace-nowrap text-xs text-gray-600">
+                              {activity.units > 0 && `${activity.units} units`}
+                              {activity.units > 0 && activity.percentage > 0 && ' • '}
+                              {activity.percentage > 0 && `${activity.percentage}%`}
+                            </td>
+                            <td className="px-3 py-2.5 whitespace-nowrap">
+                              <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                                activity.status === 'submitted' ? 'bg-yellow-100 text-yellow-700' :
+                                activity.status === 'reviewed' ? 'bg-green-100 text-green-700' :
+                                'bg-gray-100 text-gray-700'
+                              }`}>
+                                {activity.status}
+                              </span>
+                            </td>
+                            <td className="px-3 py-2.5 whitespace-nowrap">
+                              <button 
+                                onClick={() => handleReview(activity)}
+                                className="text-indigo-600 hover:text-indigo-900 text-xs font-medium transition-colors"
+                              >
+                                {activity.status === 'reviewed' ? 'View' : 'Review'}
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </main>
+
+            {/* Review Modal */}
+            {showReviewModal && selectedActivity && (
+              <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
+                <div className="bg-white rounded-xl max-w-lg w-full p-6 shadow-xl">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Review Activity</h3>
+                  
+                  <div className="space-y-3 mb-6">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Employee:</span>
+                      <span className="text-sm font-medium text-gray-900">{selectedActivity.employee}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Department:</span>
+                      <span className="text-sm font-medium text-gray-900">{selectedActivity.department}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Week Number:</span>
+                      <span className="text-sm font-medium text-gray-900">
+                        {(() => {
+                          const weekInfo = findWeekInfo(selectedActivity.week, filterWeekOptions);
+                          if (weekInfo) return `Week ${weekInfo.weekNumber}`;
+                          // Fallback: calculate directly from date
+                          const calculatedWeek = calculateWeekNumber(selectedActivity.week, 2025);
+                          return calculatedWeek ? `Week ${calculatedWeek}` : 'N/A';
+                        })()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Week Ending:</span>
+                      <span className="text-sm font-medium text-gray-900">
+                        {(() => {
+                          const weekInfo = findWeekInfo(selectedActivity.week, filterWeekOptions);
+                          if (weekInfo) return weekInfo.label.split(': ')[1];
+                          // Fallback: just show the date
+                          return selectedActivity.week;
+                        })()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Activity:</span>
+                      <span className="text-sm font-medium text-gray-900">{selectedActivity.activity}</span>
+                    </div>
+                    {selectedActivity.description && (
+                      <div>
+                        <span className="text-sm text-gray-600">Description:</span>
+                        <p className="text-sm text-gray-900 mt-1">{selectedActivity.description}</p>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Progress:</span>
+                      <span className="text-sm font-medium text-gray-900">
+                        {selectedActivity.units > 0 && `${selectedActivity.units} units`}
+                        {selectedActivity.units > 0 && selectedActivity.percentage > 0 && ' - '}
+                        {selectedActivity.percentage > 0 && `${selectedActivity.percentage}%`}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Feedback</label>
+                    <textarea
+                      value={feedback}
+                      onChange={(e) => setFeedback(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      rows="4"
+                      placeholder="Enter your feedback..."
+                    />
+                  </div>
+                  
+                  <div className="flex gap-3 justify-end">
+                    <button
+                      onClick={() => setShowReviewModal(false)}
+                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSaveReview}
+                      className="px-4 py-2 text-sm font-medium text-white bg-[#010131] hover:bg-[#111232] rounded-lg transition-colors"
+                    >
+                      Save Review
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Summary Reports Modal */}
+            {showReportsModal && (
+              <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50 overflow-y-auto">
+                <div className="bg-white rounded-xl max-w-6xl w-full p-6 shadow-xl my-8 max-h-[90vh] overflow-y-auto">
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-xl font-semibold text-gray-900">Summary Reports</h3>
+                    <button
+                      onClick={() => setShowReportsModal(false)}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  {/* Employee Summary */}
+                  <div className="mb-8">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4">Employee Activity Summary</h4>
+                    <div className="overflow-x-auto">
+                      <table className="w-full border border-gray-200 rounded-lg">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Employee</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Activities</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Draft</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Submitted</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reviewed</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Units</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Avg Completion</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {summaryStats.employees.map(emp => (
+                            <tr key={emp.email} className="hover:bg-gray-50">
+                              <td className="px-4 py-3 text-sm font-medium text-gray-900">{emp.name}</td>
+                              <td className="px-4 py-3 text-sm text-gray-600">{emp.totalActivities}</td>
+                              <td className="px-4 py-3 text-sm text-gray-600">{emp.draft}</td>
+                              <td className="px-4 py-3 text-sm text-gray-600">{emp.submitted}</td>
+                              <td className="px-4 py-3 text-sm text-gray-600">{emp.reviewed}</td>
+                              <td className="px-4 py-3 text-sm text-gray-600">{emp.totalUnits}</td>
+                              <td className="px-4 py-3 text-sm text-gray-600">{emp.avgCompletion}%</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Department Summary */}
+                  <div className="mb-8">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4">Department Performance</h4>
+                    <div className="overflow-x-auto">
+                      <table className="w-full border border-gray-200 rounded-lg">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Department</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Employees</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Activities</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Draft</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Submitted</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reviewed</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {summaryStats.departments.map(dept => (
+                            <tr key={dept.department} className="hover:bg-gray-50">
+                              <td className="px-4 py-3 text-sm font-medium text-gray-900">{dept.department}</td>
+                              <td className="px-4 py-3 text-sm text-gray-600">{dept.employeeCount}</td>
+                              <td className="px-4 py-3 text-sm text-gray-600">{dept.totalActivities}</td>
+                              <td className="px-4 py-3 text-sm text-gray-600">{dept.draft}</td>
+                              <td className="px-4 py-3 text-sm text-gray-600">{dept.submitted}</td>
+                              <td className="px-4 py-3 text-sm text-gray-600">{dept.reviewed}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Weekly Completion Rates */}
+                  <div className="mb-6">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4">Weekly Completion Rates</h4>
+                    <div className="overflow-x-auto">
+                      <table className="w-full border border-gray-200 rounded-lg">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Week Ending</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Activities</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Draft</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Submitted</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reviewed</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Completion Rate</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {summaryStats.weekly.map(week => (
+                            <tr key={week.week} className="hover:bg-gray-50">
+                              <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                                {(() => {
+                                  const weekInfo = findWeekInfo(week.week, filterWeekOptions);
+                                  return weekInfo ? weekInfo.label : week.week;
+                                })()}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-600">{week.total}</td>
+                              <td className="px-4 py-3 text-sm text-gray-600">{week.draft}</td>
+                              <td className="px-4 py-3 text-sm text-gray-600">{week.submitted}</td>
+                              <td className="px-4 py-3 text-sm text-gray-600">{week.reviewed}</td>
+                              <td className="px-4 py-3 text-sm">
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-1 bg-gray-200 rounded-full h-2">
+                                    <div 
+                                      className="bg-[#5391D5] h-2 rounded-full"
+                                      style={{ width: `${week.completionRate}%` }}
+                                    />
+                                  </div>
+                                  <span className="text-xs font-medium text-gray-700">{week.completionRate}%</span>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <button
+                      onClick={() => setShowReportsModal(false)}
+                      className="px-4 py-2 text-sm font-medium text-white bg-[#010131] hover:bg-[#111232] rounded-lg transition-colors"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Employees Admin Modal */}
+            {showEmployeesModal && (
+              <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50 overflow-y-auto">
+                <div className="bg-white rounded-xl max-w-6xl w-full p-6 shadow-xl my-8 max-h-[90vh] overflow-y-auto">
+                  <div className="flex justify-between items-center mb-6">
+                    <div>
+                      <h3 className="text-xl font-semibold text-gray-900">Employees Admin</h3>
+                      <p className="text-sm text-gray-500 mt-1">Manage employee accounts and access</p>
+                    </div>
+                    <button
+                      onClick={() => setShowEmployeesModal(false)}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      <X className="w-6 h-6" />
+                    </button>
+                  </div>
+
+                  {/* Employee List Table */}
+                  <div className="overflow-x-auto">
+                    <table className="w-full border border-gray-200 rounded-lg">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b">Name</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b">Email</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b">Role</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b">Departments</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {Object.entries(employees).map(([email, userData]) => (
+                          <tr key={email} className="hover:bg-gray-50">
+                            <td className="px-4 py-3 text-sm text-gray-900">{userData.name}</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">{email}</td>
+                            <td className="px-4 py-3 text-sm">
+                              <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                userData.role === 'admin'
+                                  ? 'bg-purple-100 text-purple-700'
+                                  : 'bg-blue-100 text-blue-700'
+                              }`}>
+                                {userData.role}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-600">
+                              {userData.departments.join(', ')}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium text-blue-900">Important Information</p>
+                        <p className="text-sm text-blue-700 mt-1">
+                          This system currently uses hardcoded employee data. All employees can login using any password with their @viftraining.com email address.
+                        </p>
+                        <p className="text-sm text-blue-700 mt-2">
+                          <strong>To modify employees:</strong> Edit the <code className="bg-blue-100 px-1 rounded">employees</code> object in the source code (around line 324 in index.html).
+                        </p>
+                        <p className="text-sm text-blue-700 mt-2">
+                          <strong>For production:</strong> Implement a backend API with proper authentication, user management, and database storage.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end mt-6">
+                    <button
+                      onClick={() => setShowEmployeesModal(false)}
+                      className="px-4 py-2 text-sm font-medium text-white bg-[#010131] hover:bg-[#111232] rounded-lg transition-colors"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      }
+    };
+
+    // Render the app
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<VIFActivityTracker />);
+  </script>
+</body>
+</html>

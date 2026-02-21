@@ -1,42 +1,32 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
 
-# dependencies
-/node_modules
-/.pnp
-.pnp.js
-.yarn/install-state.gz
+# Replit specific
+.replit.nix
+.config/
+.cache/
+.upm/
 
-# testing
-/coverage
+# Build outputs
+build/
+dist/
+.next/
+out/
 
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# misc
-.DS_Store
-*.pem
-
-# debug
+# Logs
+logs/
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# local env files
-.env*.local
-.env
+# Testing
+coverage/
+.nyc_output/
 
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-
-# editor
+# IDE
 .vscode/
 .idea/
 *.swp
@@ -44,4 +34,30 @@ next-env.d.ts
 *~
 
 # OS
+.DS_Store
 Thumbs.db
+
+# Misc
+*.pem
+.vercel
+.netlify
+
+# Claude Code
+.claude/
+
+# Supabase local
+supabase/.temp/
+
+# Temp files
+_ul
+_ul-*
+claude-code
+calude.md
+
+# Separate git repo (manage independently)
+Weekly-Status-Report/
+
+# Local database files (for local development)
+.local-data/
+*.db
+*.sqlite

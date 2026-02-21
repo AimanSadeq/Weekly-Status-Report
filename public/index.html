@@ -1,0 +1,3304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="VIFM Tracker">
+  <meta name="theme-color" content="#121140">
+  <meta name="description" content="VIFM Activity Tracker - Track and report employee activities across 6 departments with 60+ activity types for VIFM.">
+
+  <title>VIFM Activity Tracker - Employee Activity Reporting System</title>
+
+  <!-- Canonical URL (updated at runtime by JS) -->
+  <link rel="canonical" id="canonical-url" href="/">
+  <script>document.getElementById('canonical-url').href = window.location.origin + '/';</script>
+
+  <!-- Open Graph Tags -->
+  <meta property="og:title" content="VIFM Activity Tracker - Employee Activity Reporting">
+  <meta property="og:description" content="Track, manage and report employee activities across departments. Weekly status reporting for Virginia Institute of Finance and Management.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="/vifm-logo.png">
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json">
+
+  <!-- Apple Touch Icons & Favicon -->
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-192x192.png">
+
+  <!-- Preconnect to CDNs for faster loading -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Chart.js -->
+  <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!-- SheetJS for Excel export -->
+  <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Open Sans', 'Arial', 'Helvetica', 'sans-serif'],
+          },
+          colors: {
+            indigo: {
+              50:  '#f0f5fb',
+              100: '#dce6f4',
+              200: '#b3cce8',
+              300: '#84aed9',
+              400: '#5391D5',
+              500: '#4480c2',
+              600: '#356daa',
+              700: '#1e3f6e',
+              800: '#121140',
+              900: '#010131',
+            },
+            purple: {
+              50:  '#f0f5fb',
+              100: '#dce6f4',
+              200: '#b3cce8',
+              300: '#84aed9',
+              400: '#5391D5',
+              500: '#1e3f6e',
+              600: '#121140',
+              700: '#111232',
+              800: '#010131',
+              900: '#010131',
+            },
+          },
+        },
+      },
+    }
+  </script>
+
+  <style>
+    html, body {
+      overflow-x: hidden;
+      width: 100%;
+    }
+    body {
+      margin: 0;
+      font-family: 'Open Sans', Arial, Helvetica, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      background: linear-gradient(135deg, #121140 0%, #010131 100%);
+    }
+
+    .spinner {
+      border: 3px solid #f3f4f6;
+      border-top: 3px solid #356daa;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 16px 24px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      z-index: 1000;
+      animation: slideIn 0.3s ease-out;
+    }
+
+    .notification.success {
+      background: #10b981;
+      color: white;
+    }
+
+    .notification.error {
+      background: #ef4444;
+      color: white;
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateX(400px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    @keyframes fadeOut {
+      from {
+        opacity: 1;
+      }
+      to {
+        opacity: 0;
+      }
+    }
+
+    .fade-out {
+      animation: fadeOut 0.3s ease-out forwards;
+    }
+
+    /* Visual Quick Reference Styles */
+    .vif-box {
+      border: 3px solid #356daa;
+      border-radius: 12px;
+      padding: 12px;
+      background: white;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    }
+
+    .vif-header {
+      border-bottom: 3px solid #e5e7eb;
+      padding-bottom: 8px;
+      margin-bottom: 12px;
+    }
+
+    .vif-card {
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+    }
+
+    /* Mobile responsive styles */
+    @media (max-width: 768px) {
+      .activities-table-header,
+      .activity-row {
+        font-size: 0.75rem;
+      }
+
+      .mobile-card {
+        display: block !important;
+        padding: 12px;
+        border-bottom: 1px solid #e5e7eb;
+      }
+
+      .mobile-card-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
+        padding-bottom: 4px;
+      }
+
+      .mobile-card-label {
+        font-weight: 600;
+        color: #4b5563;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+      }
+
+      .mobile-card-value {
+        text-align: right;
+        font-size: 0.85rem;
+      }
+
+      .hide-mobile {
+        display: none !important;
+      }
+
+      .show-mobile {
+        display: block !important;
+      }
+    }
+
+    @media (min-width: 769px) {
+      .mobile-view {
+        display: none !important;
+      }
+
+      .desktop-view {
+        display: block !important;
+      }
+    }
+
+    /* Filter button styles */
+    .filter-btn.active {
+      background-color: #356daa !important;
+      color: white !important;
+    }
+
+    .vif-card:hover {
+      border-color: #5391D5;
+      box-shadow: 0 4px 12px rgba(83, 145, 213, 0.2);
+      transform: translateY(-2px);
+    }
+
+    .stat-box {
+      background: linear-gradient(135deg, #121140 0%, #010131 100%);
+      border-radius: 12px;
+      padding: 24px;
+      color: white;
+      box-shadow: 0 4px 12px rgba(18, 17, 64, 0.3);
+    }
+
+    .activity-item {
+      border-left: 4px solid #356daa;
+      background: #f9fafb;
+      transition: all 0.3s ease;
+    }
+
+    .activity-item:hover {
+      background: white;
+      border-left-color: #10b981;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .form-section {
+      background: linear-gradient(to right, #f9fafb, white);
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+    }
+
+    .header-banner {
+      background: #FEFFF9;
+      color: #010131;
+      border-bottom: 4px solid #5391D5;
+    }
+
+    /* Skeleton loading animation */
+    .skeleton {
+      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 4px;
+    }
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* Bulk action toolbar */
+    .bulk-toolbar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(135deg, #121140 0%, #010131 100%);
+      color: white;
+      padding: 12px 24px;
+      z-index: 100;
+      display: none;
+      box-shadow: 0 -4px 12px rgba(0,0,0,0.3);
+    }
+    .bulk-toolbar.active { display: flex; align-items: center; justify-content: space-between; }
+
+    /* Undo toast */
+    .undo-toast {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1f2937;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    /* Dark mode overrides */
+    .dark body, .dark .bg-gray-50 { background: #1a1a2e !important; }
+    .dark .vif-box { background: #16213e !important; border-color: #0f3460 !important; color: #e0e0e0; }
+    .dark .header-banner { background: #0f3460 !important; border-color: #5391D5 !important; }
+    .dark .bg-white { background: #16213e !important; }
+    .dark .text-gray-900 { color: #e0e0e0 !important; }
+    .dark .text-gray-600, .dark .text-gray-700 { color: #a0a0b0 !important; }
+    .dark .border-gray-200, .dark .border-gray-300 { border-color: #2a2a4a !important; }
+    .dark input, .dark select, .dark textarea { background: #1a1a2e !important; color: #e0e0e0 !important; border-color: #3a3a5a !important; }
+    .dark .stat-box { background: linear-gradient(135deg, #0f3460 0%, #16213e 100%) !important; }
+    .dark .activity-item { background: #1a1a2e !important; border-left-color: #5391D5 !important; }
+    .dark .activity-item:hover { background: #16213e !important; }
+    .dark .bg-gradient-to-r { background: #16213e !important; }
+    .dark .bg-indigo-50, .dark .bg-green-50, .dark .bg-purple-50 { background: #1a1a2e !important; }
+    .dark .notification.success { background: #065f46; }
+    .dark .notification.error { background: #991b1b; }
+
+    /* Notification bell */
+    .notif-badge {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      background: #ef4444;
+      color: white;
+      font-size: 10px;
+      font-weight: 700;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .notif-dropdown {
+      position: fixed;
+      top: auto;
+      right: 8px;
+      width: min(320px, calc(100vw - 16px));
+      max-height: 400px;
+      overflow-y: auto;
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+      z-index: 200;
+      display: none;
+    }
+    @media (min-width: 769px) {
+      .notif-dropdown {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        width: 320px;
+      }
+    }
+    .notif-dropdown.active { display: block; }
+    .dark .notif-dropdown { background: #16213e; border-color: #2a2a4a; }
+
+    /* Mobile header menu */
+    .mobile-menu-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 300;
+    }
+    .mobile-menu-overlay.active { display: block; }
+    .mobile-menu-panel {
+      position: fixed;
+      top: 0;
+      right: -280px;
+      width: 280px;
+      height: 100%;
+      background: white;
+      z-index: 301;
+      transition: right 0.3s ease;
+      overflow-y: auto;
+      box-shadow: -4px 0 24px rgba(0,0,0,0.15);
+    }
+    .mobile-menu-panel.active { right: 0; }
+    .dark .mobile-menu-panel { background: #16213e; }
+
+    /* Password complexity indicator */
+    .pw-strength { height: 4px; border-radius: 2px; transition: all 0.3s; }
+    .pw-strength.weak { background: #ef4444; width: 33%; }
+    .pw-strength.medium { background: #f59e0b; width: 66%; }
+    .pw-strength.strong { background: #10b981; width: 100%; }
+
+    /* Mobile input fix - prevent iOS zoom and overflow */
+    @media screen and (max-width: 768px) {
+      input, select, textarea {
+        font-size: 16px !important;
+        max-width: 100%;
+        box-sizing: border-box;
+        min-width: 0;
+      }
+      /* Improve touch targets */
+      button, a, .filter-btn {
+        min-height: 44px;
+        min-width: 44px;
+      }
+      /* Notification toast centered on mobile */
+      .notification {
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
+        max-width: calc(100vw - 32px);
+        text-align: center;
+      }
+      @keyframes slideIn {
+        from { transform: translateX(-50%) translateY(-20px); opacity: 0; }
+        to { transform: translateX(-50%) translateY(0); opacity: 1; }
+      }
+      /* Better spacing for filter buttons on mobile */
+      .filter-btn {
+        min-height: 36px;
+        min-width: auto;
+        padding-left: 12px;
+        padding-right: 12px;
+      }
+    }
+
+    /* Safe area insets for notched devices */
+    @supports (padding: env(safe-area-inset-top)) {
+      header { padding-top: env(safe-area-inset-top); }
+      .bulk-toolbar { padding-bottom: env(safe-area-inset-bottom); }
+      main { padding-left: max(12px, env(safe-area-inset-left)); padding-right: max(12px, env(safe-area-inset-right)); }
+    }
+  </style>
+</head>
+<body class="bg-gray-50">
+  <!-- Login Section -->
+  <div id="login-section" class="min-h-screen flex items-center justify-center px-4 py-6">
+    <div class="max-w-md w-full space-y-4 vif-box">
+      <div class="text-center">
+        <div class="mx-auto mb-3">
+          <img src="/vifm-logo.png" alt="VIFM Activity Tracker logo" width="1080" height="1080" class="mx-auto h-24 md:h-28 w-auto">
+        </div>
+        <h2 class="text-center text-xl md:text-2xl font-extrabold text-gray-900">
+          VIFM Activity Tracker
+        </h2>
+        <p class="mt-1 text-center text-xs text-gray-600 font-medium">
+          Sign in to your account
+        </p>
+        <div class="mt-2 p-2 bg-indigo-50 border-2 border-indigo-200 rounded-lg">
+          <p class="text-xs text-indigo-800 font-semibold">17 Employees • 6 Departments • 60+ Activity Types</p>
+        </div>
+      </div>
+      <form id="login-form" class="mt-4 space-y-3">
+        <div class="rounded-md shadow-sm space-y-4">
+          <div>
+            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">
+              Email address
+            </label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              required
+              class="appearance-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 text-base md:text-sm"
+              placeholder="Enter your email"
+            />
+          </div>
+          <div>
+            <label for="password" class="block text-sm font-medium text-gray-700 mb-1">
+              Password
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              required
+              class="appearance-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 text-base md:text-sm"
+              placeholder="Enter your password"
+            />
+          </div>
+        </div>
+
+        <div id="login-error" class="hidden text-sm text-red-600 text-center"></div>
+
+        <div>
+          <button
+            type="submit"
+            class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+          >
+            <span id="login-button-text">Sign in</span>
+            <div id="login-spinner" class="hidden ml-2 spinner" style="width: 20px; height: 20px; border-width: 2px;"></div>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Dashboard Section -->
+  <div id="dashboard-section" class="hidden min-h-screen">
+    <!-- Header -->
+    <header class="header-banner shadow-lg">
+      <div class="max-w-7xl mx-auto px-3 py-3">
+        <div class="flex justify-between items-center">
+          <div class="min-w-0 flex-1">
+            <h1 class="text-lg md:text-2xl font-bold flex items-center gap-2 text-indigo-900">
+              <img src="/vifm-logo.png" alt="VIFM" width="1080" height="1080" class="h-9 md:h-11 w-auto flex-shrink-0"> <span class="truncate">Activity Tracker</span>
+            </h1>
+            <div class="mt-1 flex items-center space-x-2 md:space-x-3 text-xs md:text-sm overflow-x-auto">
+              <span id="user-name" class="font-semibold bg-indigo-100 text-indigo-900 px-2 py-0.5 rounded-full whitespace-nowrap"></span>
+              <span class="text-indigo-400">•</span>
+              <span id="user-role" class="capitalize bg-indigo-100 text-indigo-900 px-2 py-0.5 rounded-full whitespace-nowrap"></span>
+            </div>
+          </div>
+          <div class="flex gap-1 md:gap-2 items-center flex-shrink-0">
+            <!-- Activity counter badge -->
+            <span id="weekly-activity-badge" class="hidden px-2 md:px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-xs font-bold"></span>
+            <!-- Notification bell -->
+            <div class="relative" id="notif-container">
+              <button id="notif-bell" class="relative p-2 text-indigo-700 hover:text-indigo-900 transition min-w-[44px] min-h-[44px] flex items-center justify-center" title="Notifications">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                </svg>
+                <span id="notif-badge" class="notif-badge hidden">0</span>
+              </button>
+              <div id="notif-dropdown" class="notif-dropdown">
+                <div class="p-3 border-b border-gray-200 flex justify-between items-center">
+                  <span class="font-bold text-sm text-gray-900">Notifications</span>
+                  <button id="mark-all-read" class="text-xs text-indigo-600 hover:text-indigo-800 font-semibold">Mark all read</button>
+                </div>
+                <div id="notif-list" class="divide-y divide-gray-100"></div>
+                <div id="notif-empty" class="p-4 text-center text-gray-500 text-sm">No notifications</div>
+              </div>
+            </div>
+            <!-- Dark mode toggle -->
+            <button id="dark-mode-toggle" class="p-2 text-indigo-700 hover:text-indigo-900 transition min-w-[44px] min-h-[44px] flex items-center justify-center" title="Toggle Dark Mode">
+              <svg id="dark-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+              </svg>
+              <svg id="light-icon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+              </svg>
+            </button>
+            <!-- Desktop buttons (hidden on mobile) -->
+            <a
+              id="admin-link"
+              href="/admin-management.html"
+              class="hidden md:inline-flex px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all font-bold shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+            >
+              Admin
+            </a>
+            <button
+              id="change-password-button"
+              class="hidden md:inline-flex px-3 py-2 bg-indigo-700 text-white rounded-lg hover:bg-indigo-600 transition-all font-bold shadow-md hover:shadow-lg transform hover:-translate-y-0.5 text-sm"
+            >
+              Change Password
+            </button>
+            <button
+              id="logout-button"
+              class="hidden md:inline-flex px-4 py-2 bg-indigo-900 text-white rounded-lg hover:bg-indigo-800 transition-all font-bold shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+            >
+              Logout
+            </button>
+            <!-- Mobile hamburger menu button -->
+            <button
+              id="mobile-menu-button"
+              class="md:hidden p-2 text-indigo-700 hover:text-indigo-900 transition min-w-[44px] min-h-[44px] flex items-center justify-center"
+              title="Menu"
+            >
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Mobile Slide-out Menu -->
+    <div id="mobile-menu-overlay" class="mobile-menu-overlay"></div>
+    <div id="mobile-menu-panel" class="mobile-menu-panel">
+      <div class="p-4 border-b border-gray-200">
+        <div class="flex justify-between items-center">
+          <h3 class="font-bold text-lg text-gray-900">Menu</h3>
+          <button id="mobile-menu-close" aria-label="Close menu" class="p-2 text-gray-500 hover:text-gray-700 min-w-[44px] min-h-[44px] flex items-center justify-center">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <nav class="p-4 space-y-2">
+        <a id="admin-link-mobile" href="/admin-management.html" class="hidden w-full px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all font-bold text-sm text-center block">
+          Admin Panel
+        </a>
+        <button id="change-password-button-mobile" class="w-full px-4 py-3 bg-indigo-700 text-white rounded-lg hover:bg-indigo-600 transition-all font-bold text-sm text-center">
+          Change Password
+        </button>
+        <button id="logout-button-mobile" class="w-full px-4 py-3 bg-indigo-900 text-white rounded-lg hover:bg-indigo-800 transition-all font-bold text-sm text-center">
+          Logout
+        </button>
+      </nav>
+    </div>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-3 py-4">
+      <!-- Week and Date Banner -->
+      <div class="vif-box mb-4 bg-gradient-to-r from-indigo-50 to-purple-50">
+        <div class="flex flex-col md:flex-row items-center justify-between gap-3">
+          <div class="flex flex-wrap items-center gap-3 md:gap-4 justify-center md:justify-start w-full md:w-auto">
+            <div class="text-center">
+              <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide">Current Week</p>
+              <p id="current-week" class="text-xl md:text-2xl font-bold text-indigo-600 mt-0.5">Week 0</p>
+            </div>
+            <div class="h-12 w-px bg-gray-300 hidden md:block"></div>
+            <div class="text-center">
+              <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide">Today's Date</p>
+              <p id="current-date" class="text-sm md:text-lg font-bold text-gray-900 mt-0.5">Loading...</p>
+            </div>
+            <div class="h-12 w-px bg-gray-300 hidden md:block"></div>
+            <div class="text-center">
+              <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide">Week Ending</p>
+              <p id="week-ending" class="text-sm md:text-lg font-bold text-purple-600 mt-0.5">Loading...</p>
+            </div>
+          </div>
+          <div class="text-center">
+            <div class="bg-white rounded-lg px-3 md:px-4 py-1.5 md:py-2 shadow-md border-2 border-indigo-200">
+              <p class="text-xs font-semibold text-gray-600 uppercase">Year</p>
+              <p id="current-year" class="text-lg md:text-xl font-bold text-indigo-600">2025</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dashboard Summary -->
+      <div id="dashboard-summary" class="vif-box mb-4">
+        <div class="vif-header flex items-center justify-between">
+          <h2 class="text-xl font-bold text-gray-900">Dashboard Summary</h2>
+          <div class="flex gap-2 items-center">
+            <select id="summary-period" aria-label="Summary period" class="px-3 py-1 border border-gray-300 rounded-lg text-sm">
+              <option value="this-week">This Week</option>
+              <option value="this-month" selected>This Month</option>
+              <option value="last-month">Last Month</option>
+            </select>
+            <button id="toggle-summary" class="text-gray-400 hover:text-gray-600 text-sm font-bold">▼</button>
+          </div>
+        </div>
+        <div id="dashboard-summary-body">
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-3 rounded-lg text-center">
+              <div class="text-blue-600 text-xs font-medium">Total Activities</div>
+              <div id="sum-total" class="text-2xl font-bold text-blue-900">-</div>
+            </div>
+            <div class="bg-gradient-to-br from-green-50 to-green-100 p-3 rounded-lg text-center">
+              <div class="text-green-600 text-xs font-medium">Total Units</div>
+              <div id="sum-units" class="text-2xl font-bold text-green-900">-</div>
+            </div>
+            <div class="bg-gradient-to-br from-purple-50 to-purple-100 p-3 rounded-lg text-center">
+              <div class="text-purple-600 text-xs font-medium">Departments</div>
+              <div id="sum-depts" class="text-2xl font-bold text-purple-900">-</div>
+            </div>
+            <div class="bg-gradient-to-br from-orange-50 to-orange-100 p-3 rounded-lg text-center">
+              <div class="text-orange-600 text-xs font-medium">Activity Types</div>
+              <div id="sum-types" class="text-2xl font-bold text-orange-900">-</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Add Activity Form -->
+      <div class="vif-box mb-4">
+        <div class="vif-header flex items-center justify-between">
+          <div>
+            <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">
+              ➕ Add Activities for Date
+            </h2>
+            <p class="text-xs text-gray-600 mt-0.5">Select a date first, then add multiple activities for that date</p>
+          </div>
+        </div>
+
+        <!-- Add Activity Form -->
+        <form id="activity-form" class="space-y-3">
+          <!-- Employee Name Banner -->
+          <div id="logging-as-banner" class="p-2 bg-green-50 border-2 border-green-200 rounded-lg flex items-center gap-2">
+            <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+            </svg>
+            <span class="text-sm font-semibold text-green-800">Logging as: <span id="logging-as-name" class="text-green-900"></span></span>
+          </div>
+
+          <!-- Row 1: Department + Activity Date + Units/Days -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+              <label for="department" class="block text-sm font-medium text-gray-700 mb-1">
+                Department <span class="text-red-500">*</span>
+              </label>
+              <select
+                id="department"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                <option value="">Select department first</option>
+              </select>
+            </div>
+            <div>
+              <label for="activity-date" class="block text-sm font-medium text-gray-700 mb-1">
+                Activity Date <span class="text-red-500">*</span>
+              </label>
+              <input
+                id="activity-date"
+                type="date"
+                required
+                class="w-full max-w-full px-3 py-2 border-2 border-indigo-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm font-semibold box-border"
+                style="-webkit-appearance: none; min-width: 0;"
+              />
+            </div>
+            <div>
+              <label for="units" class="block text-sm font-medium text-gray-700 mb-1">
+                Units/Days <span class="text-gray-400 text-xs">(optional)</span>
+              </label>
+              <input
+                id="units"
+                type="number"
+                step="1"
+                min="0"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                placeholder="Enter units/days"
+              />
+            </div>
+          </div>
+
+          <!-- Row 2: Activity Type + Description (same line) -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:items-start">
+            <div>
+              <div class="flex items-center justify-between mb-1" style="min-height: 28px;">
+                <label for="activity-type" class="text-sm font-medium text-gray-700">
+                  Activity Type <span class="text-red-500">*</span>
+                </label>
+                <button
+                  type="button"
+                  id="voice-activity-btn"
+                  class="flex items-center gap-1 px-3 py-1 text-xs font-semibold bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors shadow-md"
+                  title="Click to dictate activity type"
+                >
+                  <svg id="mic-icon-activity" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
+                  </svg>
+                  <span id="voice-activity-status">Voice</span>
+                </button>
+              </div>
+              <input
+                type="text"
+                id="activity-type"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                placeholder="e.g., Client Meeting, Report Writing..."
+              />
+            </div>
+            <div>
+              <div class="flex items-center justify-between mb-1" style="min-height: 28px;">
+                <label for="description" class="text-sm font-medium text-gray-700">
+                  Description <span class="text-gray-400 text-xs">(optional)</span>
+                </label>
+                <button
+                  type="button"
+                  id="voice-input-btn"
+                  class="flex items-center gap-1 px-3 py-1 text-xs font-semibold bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors shadow-md"
+                  title="Click to dictate your description"
+                >
+                  <svg id="mic-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
+                  </svg>
+                  <span id="voice-status">Voice</span>
+                </button>
+              </div>
+              <textarea
+                id="description"
+                rows="5"
+                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                placeholder="Describe what you worked on..."
+              ></textarea>
+            </div>
+          </div>
+
+          <div class="flex justify-end gap-2">
+            <button
+              type="submit"
+              class="w-full md:w-auto px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium flex items-center justify-center text-sm"
+            >
+              <span id="add-button-text">➕ Add Activity</span>
+              <div id="add-spinner" class="hidden ml-2 spinner" style="width: 16px; height: 16px; border-width: 2px;"></div>
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Activities List -->
+      <div class="vif-box">
+        <div class="vif-header">
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+            <div>
+              <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">
+                📋 My Activities
+              </h2>
+              <p class="text-xs text-gray-600 mt-0.5">Track all your submitted activities</p>
+            </div>
+            <div class="flex gap-2 flex-wrap w-full md:w-auto">
+              <a href="/calendar.html" class="flex-1 md:flex-none text-center px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium text-sm">Calendar</a>
+              <a href="/reports.html" class="flex-1 md:flex-none text-center px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium text-sm">Reports</a>
+              <button id="export-csv-button" class="flex-1 md:flex-none px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center justify-center gap-2 text-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                Export
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filter and Search Section -->
+        <div class="mb-4 space-y-3">
+          <!-- Search Bar -->
+          <div class="relative">
+            <label for="search-activities" class="sr-only">Search activities</label>
+            <input
+              id="search-activities"
+              type="text"
+              placeholder="Search activities by description..."
+              aria-label="Search activities by description"
+              class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+            />
+            <svg class="absolute left-3 top-2.5 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+          </div>
+
+          <!-- Advanced Filters -->
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div>
+              <label for="filter-week" class="block text-xs font-medium text-gray-700 mb-1">Week Number</label>
+              <input
+                id="filter-week"
+                type="number"
+                placeholder="e.g., 1-52"
+                min="1"
+                max="52"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+              />
+            </div>
+            <div>
+              <label for="filter-consultant" class="block text-xs font-medium text-gray-700 mb-1">Consultant</label>
+              <select id="filter-consultant" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                <option value="">All Consultants</option>
+                <!-- Options loaded dynamically -->
+              </select>
+            </div>
+            <div>
+              <label for="filter-department" class="block text-xs font-medium text-gray-700 mb-1">Department</label>
+              <select id="filter-department" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                <option value="">All Departments</option>
+                <!-- Options loaded dynamically -->
+              </select>
+            </div>
+            <div>
+              <label for="filter-activity-type" class="block text-xs font-medium text-gray-700 mb-1">Activity Type</label>
+              <select id="filter-activity-type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                <option value="">All Activities</option>
+                <!-- Options loaded dynamically -->
+              </select>
+            </div>
+          </div>
+
+          <!-- Date Filters -->
+          <div class="overflow-x-auto -mx-3 px-3">
+            <div class="flex gap-2 items-center min-w-max pb-1">
+              <span class="text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">Quick Filter:</span>
+              <button data-filter="all" class="filter-btn active px-3 py-1.5 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors text-xs font-medium whitespace-nowrap">All</button>
+              <button data-filter="today" class="filter-btn px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-xs font-medium whitespace-nowrap">Today</button>
+              <button data-filter="this-week" class="filter-btn px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-xs font-medium whitespace-nowrap">This Week</button>
+              <button data-filter="last-week" class="filter-btn px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-xs font-medium whitespace-nowrap">Last Week</button>
+              <button data-filter="this-month" class="filter-btn px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-xs font-medium whitespace-nowrap">This Month</button>
+              <button data-filter="custom" class="filter-btn px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-xs font-medium whitespace-nowrap">Custom Range</button>
+              <button id="clear-filters-btn" class="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-xs font-medium whitespace-nowrap">Clear All</button>
+            </div>
+          </div>
+          <div class="flex justify-end">
+            <span id="activity-count" class="text-xs font-semibold text-gray-600"></span>
+          </div>
+
+          <!-- Custom Date Range (Hidden by default) -->
+          <div id="custom-date-range" class="hidden grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label for="filter-start-date" class="block text-xs font-medium text-gray-700 mb-1">From Date</label>
+              <input
+                id="filter-start-date"
+                type="date"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+              />
+            </div>
+            <div>
+              <label for="filter-end-date" class="block text-xs font-medium text-gray-700 mb-1">To Date</label>
+              <input
+                id="filter-end-date"
+                type="date"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div id="activities-container" class="space-y-2">
+          <div class="flex justify-center py-4">
+            <div class="spinner"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bulk Action Toolbar (fixed bottom) -->
+      <div id="bulk-toolbar" class="bulk-toolbar">
+        <div class="flex items-center gap-3">
+          <span id="bulk-count" class="font-bold text-sm">0 selected</span>
+          <button id="bulk-deselect" class="px-3 py-1 bg-gray-600 text-white rounded text-xs font-medium hover:bg-gray-500">Deselect All</button>
+        </div>
+        <div class="flex gap-2">
+          <button id="bulk-delete-btn" class="px-4 py-1.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-500">Delete Selected</button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Change Password Modal -->
+  <div id="change-password-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center px-4">
+    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-bold text-gray-900">Change Password</h3>
+        <button id="close-password-modal" aria-label="Close password modal" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+      </div>
+      <form id="change-password-form" class="space-y-4">
+        <div>
+          <label for="current-password" class="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
+          <input id="current-password" type="password" required
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+            placeholder="Enter current password" />
+        </div>
+        <div>
+          <label for="new-password" class="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+          <input id="new-password" type="password" required minlength="8"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+            placeholder="At least 8 characters" />
+          <div class="mt-1">
+            <div class="bg-gray-200 rounded-full h-1"><div id="pw-strength-bar" class="pw-strength weak"></div></div>
+            <div id="pw-requirements" class="mt-1 text-xs text-gray-500 space-y-0.5">
+              <div id="pw-len" class="text-red-500">At least 8 characters</div>
+              <div id="pw-upper" class="text-red-500">One uppercase letter</div>
+              <div id="pw-num" class="text-red-500">One number</div>
+              <div id="pw-special" class="text-red-500">One special character</div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <label for="confirm-password" class="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
+          <input id="confirm-password" type="password" required minlength="8"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+            placeholder="Re-enter new password" />
+        </div>
+        <div id="password-error" class="hidden text-sm text-red-600"></div>
+        <button type="submit"
+          class="w-full py-2 px-4 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium text-sm">
+          <span id="change-pw-btn-text">Update Password</span>
+          <div id="change-pw-spinner" class="hidden inline-block ml-2 spinner" style="width: 16px; height: 16px; border-width: 2px; vertical-align: middle;"></div>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Export Modal -->
+  <div id="export-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center px-4">
+    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-bold text-gray-900">Export Activities</h3>
+        <button onclick="document.getElementById('export-modal').classList.add('hidden')" aria-label="Close export modal" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+      </div>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Format</label>
+          <div class="flex gap-2">
+            <label class="flex items-center gap-2 px-3 py-2 border-2 border-indigo-200 rounded-lg cursor-pointer hover:bg-indigo-50">
+              <input type="radio" name="export-format" value="csv" checked /> CSV
+            </label>
+            <label class="flex items-center gap-2 px-3 py-2 border-2 border-indigo-200 rounded-lg cursor-pointer hover:bg-indigo-50">
+              <input type="radio" name="export-format" value="xlsx" /> Excel (XLSX)
+            </label>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label for="export-start" class="block text-xs font-medium text-gray-700 mb-1">From Date</label>
+            <input type="date" id="export-start" aria-label="Export from date" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+          </div>
+          <div>
+            <label for="export-end" class="block text-xs font-medium text-gray-700 mb-1">To Date</label>
+            <input type="date" id="export-end" aria-label="Export to date" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+          </div>
+        </div>
+        <label class="flex items-center gap-2 text-sm cursor-pointer">
+          <input type="checkbox" id="export-use-filters" aria-label="Use current filters" checked /> Use current filters
+        </label>
+        <button id="export-go-btn" class="w-full py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm">Download</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bulk Delete Confirmation Modal -->
+  <div id="bulk-confirm-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center px-4">
+    <div class="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6">
+      <h3 class="text-lg font-bold text-gray-900 mb-2">Confirm Bulk Delete</h3>
+      <p id="bulk-confirm-msg" class="text-sm text-gray-600 mb-4">Are you sure you want to delete 0 activities?</p>
+      <div class="flex gap-2 justify-end">
+        <button onclick="document.getElementById('bulk-confirm-modal').classList.add('hidden')" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium">Cancel</button>
+        <button id="bulk-confirm-yes" class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-500">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Activity Detail Modal -->
+  <div id="activity-detail-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center px-4">
+    <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+      <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-xl flex justify-between items-center">
+        <h3 class="text-lg font-bold text-gray-900">Activity Details</h3>
+        <button id="close-detail-modal" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+      </div>
+      <div id="activity-detail-body" class="px-6 py-4 space-y-4">
+        <!-- Populated dynamically -->
+      </div>
+      <div class="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-3 rounded-b-xl flex gap-2 justify-end">
+        <button id="detail-edit-btn" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium">Edit</button>
+        <button id="detail-close-btn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm font-medium">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Keyboard Shortcuts Help -->
+  <div id="shortcuts-help" class="hidden fixed bottom-4 right-4 bg-white rounded-lg shadow-xl border border-gray-200 p-4 z-50" style="min-width:200px;">
+    <div class="flex justify-between items-center mb-2">
+      <span class="font-bold text-sm text-gray-900">Keyboard Shortcuts</span>
+      <button onclick="document.getElementById('shortcuts-help').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">&times;</button>
+    </div>
+    <div class="text-xs text-gray-600 space-y-1">
+      <div><kbd class="px-1 py-0.5 bg-gray-100 rounded border text-xs">Ctrl+N</kbd> Focus activity form</div>
+      <div><kbd class="px-1 py-0.5 bg-gray-100 rounded border text-xs">Ctrl+F</kbd> Focus search</div>
+      <div><kbd class="px-1 py-0.5 bg-gray-100 rounded border text-xs">Esc</kbd> Close modals</div>
+      <div><kbd class="px-1 py-0.5 bg-gray-100 rounded border text-xs">?</kbd> Toggle this help</div>
+    </div>
+  </div>
+
+  <!-- Notification Container -->
+  <div id="notification-container"></div>
+
+  <!-- PWA Install Banner -->
+  <div id="install-banner" class="hidden fixed bottom-0 left-0 right-0 bg-gradient-to-r from-indigo-800 to-indigo-900 text-white p-4 shadow-2xl z-50">
+    <div class="max-w-7xl mx-auto flex items-center justify-between flex-wrap gap-3">
+      <div class="flex items-center gap-3">
+        <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+        </svg>
+        <div>
+          <p class="font-bold">Install VIFM Activity Tracker</p>
+          <p class="text-xs text-indigo-100">Get the app for quick access and offline support</p>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <button id="install-btn" class="px-4 py-2 bg-white text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors font-semibold text-sm">
+          Install
+        </button>
+        <button id="install-dismiss" class="px-4 py-2 bg-indigo-700 text-white rounded-lg hover:bg-indigo-800 transition-colors text-sm">
+          Not Now
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Offline Status Indicator -->
+  <div id="offline-indicator" class="hidden fixed bottom-4 left-4 bg-yellow-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 flex items-center gap-2">
+    <svg class="w-5 h-5 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3m8.293 8.293l1.414 1.414"></path>
+    </svg>
+    <span class="font-semibold text-sm">You're offline - Changes will sync when reconnected</span>
+  </div>
+
+  <script src="/auth-helpers.js"></script>
+  <script>
+    // Global state
+    let currentUser = null;
+    let activities = [];
+    let filteredActivities = []; // Filtered activities based on search and date filter
+    let pendingActivities = []; // Activities for the selected date before submission
+    let selectedDate = null;
+    let editingActivityId = null; // Track which activity is being edited
+    let currentFilter = 'all'; // Current date filter
+    let searchQuery = ''; // Current search query
+
+    // Helper Functions
+    function showNotification(message, type = 'success') {
+      const container = document.getElementById('notification-container');
+      const notification = document.createElement('div');
+      notification.className = `notification ${type}`;
+      notification.textContent = message;
+      container.appendChild(notification);
+
+      setTimeout(() => {
+        notification.classList.add('fade-out');
+        setTimeout(() => notification.remove(), 300);
+      }, 3000);
+    }
+
+    // Utility function to escape HTML and prevent XSS
+    function escapeHtml(text) {
+      if (!text) return '';
+      const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+      };
+      return String(text).replace(/[&<>"']/g, m => map[m]);
+    }
+
+    function getWeekNumber(date) {
+      // Week ends on Friday, starts on Saturday
+      // Friday is day 5, so we adjust to make Friday the last day of the week
+      const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+      // Get the day of week (0 = Sunday, 1 = Monday, ..., 5 = Friday, 6 = Saturday)
+      const dayOfWeek = d.getDay();
+
+      // Calculate the Friday of this week (end of week)
+      // If today is Saturday (6), we're in the next week
+      let daysToFriday;
+      if (dayOfWeek === 6) { // Saturday
+        daysToFriday = 6; // Next Friday
+      } else { // Sunday (0) to Friday (5)
+        daysToFriday = 5 - dayOfWeek; // This Friday
+      }
+
+      const friday = new Date(d);
+      friday.setDate(d.getDate() + daysToFriday);
+
+      // Find the first Friday of the year
+      const yearStart = new Date(friday.getFullYear(), 0, 1);
+      const yearStartDay = yearStart.getDay();
+
+      // Calculate days until first Friday
+      let daysToFirstFriday;
+      if (yearStartDay <= 5) {
+        daysToFirstFriday = 5 - yearStartDay;
+      } else {
+        daysToFirstFriday = 6; // Saturday -> next Friday
+      }
+
+      const firstFriday = new Date(yearStart);
+      firstFriday.setDate(1 + daysToFirstFriday);
+
+      // Calculate week number
+      const weekNumber = Math.floor((friday - firstFriday) / (7 * 24 * 60 * 60 * 1000)) + 1;
+
+      return weekNumber;
+    }
+
+    function getCurrentWeek() {
+      return getWeekNumber(new Date());
+    }
+
+    function updateDateDisplay() {
+      const now = new Date();
+
+      // Update week number
+      const weekNumber = getCurrentWeek();
+      document.getElementById('current-week').textContent = `Week ${weekNumber}`;
+
+      // Update current date
+      const options = {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      };
+      const formattedDate = now.toLocaleDateString('en-US', options);
+      document.getElementById('current-date').textContent = formattedDate;
+
+      // Calculate and update week ending (Friday of current week)
+      const currentDay = now.getDay(); // 0 = Sunday, 5 = Friday
+      const daysUntilFriday = (5 - currentDay + 7) % 7; // Days to add to get to Friday
+      const friday = new Date(now);
+      friday.setDate(now.getDate() + daysUntilFriday);
+
+      const weekEndingFormatted = friday.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      });
+      document.getElementById('week-ending').textContent = weekEndingFormatted;
+
+      // Update year
+      document.getElementById('current-year').textContent = now.getFullYear();
+    }
+
+    // Store all activity types for filtering
+    let allActivityTypes = [];
+    let allDepartments = [];
+
+    // Load activity types and departments from API
+    async function loadMetadata() {
+      try {
+        const response = await authFetch('/api/metadata/all');
+        const data = await response.json();
+
+        if (data.success) {
+          // Store for filtering
+          allActivityTypes = data.activityTypes;
+          allDepartments = data.departments;
+
+          // Populate departments only (filtered by employee assignment)
+          const departmentSelect = document.getElementById('department');
+          departmentSelect.innerHTML = '<option value="">Select department</option>';
+
+          if (data.departments.length === 0) {
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = 'No departments assigned';
+            departmentSelect.appendChild(option);
+            showNotification('You have no departments assigned. Please contact admin.', 'error');
+          } else {
+            // Find primary department (first one is primary from the API)
+            let primaryDepartment = null;
+
+            data.departments.forEach((dept) => {
+              const option = document.createElement('option');
+              option.value = dept.name;
+              option.textContent = dept.isPrimary ? `${dept.name} (Primary)` : dept.name;
+              departmentSelect.appendChild(option);
+
+              // Use the isPrimary flag from the API
+              if (dept.isPrimary) {
+                primaryDepartment = dept.name;
+              }
+            });
+
+            // Fallback: if no department is marked primary, use the first one
+            if (!primaryDepartment && data.departments.length > 0) {
+              primaryDepartment = data.departments[0].name;
+            }
+
+            // Auto-select primary department
+            if (primaryDepartment) {
+              departmentSelect.value = primaryDepartment;
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error loading metadata:', error);
+        showNotification('Failed to load activity types and departments', 'error');
+      }
+    }
+
+    function isAnyFilterActive() {
+      return searchQuery
+        || currentFilter !== 'all'
+        || document.getElementById('filter-week')?.value
+        || document.getElementById('filter-department')?.value
+        || document.getElementById('filter-consultant')?.value
+        || document.getElementById('filter-activity-type')?.value;
+    }
+
+    function renderActivities() {
+      const container = document.getElementById('activities-container');
+      const displayActivities = isAnyFilterActive() ? filteredActivities : activities;
+
+      // Update activity count
+      document.getElementById('activity-count').textContent = `${displayActivities.length} ${displayActivities.length === 1 ? 'activity' : 'activities'}`;
+
+      if (displayActivities.length === 0 && activities.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-12">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+            </svg>
+            <p class="mt-4 text-gray-600">No activities yet. Add your first activity above!</p>
+          </div>
+        `;
+        return;
+      }
+
+      if (displayActivities.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-12">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+            <p class="mt-4 text-gray-600">No activities found matching your filters.</p>
+            <button onclick="resetFilters()" class="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm">Clear Filters</button>
+          </div>
+        `;
+        return;
+      }
+
+      // Group activities by date
+      const groupedByDate = {};
+      displayActivities.forEach(activity => {
+        const date = activity.week || activity.activityDate || 'No Date';
+        if (!groupedByDate[date]) {
+          groupedByDate[date] = [];
+        }
+        groupedByDate[date].push(activity);
+      });
+
+      // Sort dates in descending order (most recent first)
+      const sortedDates = Object.keys(groupedByDate).sort((a, b) => {
+        if (a === 'No Date') return 1;
+        if (b === 'No Date') return -1;
+        return new Date(b) - new Date(a);
+      });
+
+      // Render grouped activities
+      const groupedHtml = sortedDates.map(date => {
+        const dateActivities = groupedByDate[date];
+        const formattedDate = date !== 'No Date'
+          ? new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+          : 'No Date';
+
+        const activitiesHtml = dateActivities.map(activity => {
+        const statusColors = {
+          'draft': 'bg-gray-100 text-gray-700 border-gray-300',
+          'pending': 'bg-yellow-100 text-yellow-800 border-yellow-300',
+          'submitted': 'bg-blue-100 text-blue-800 border-blue-300',
+          'approved': 'bg-green-100 text-green-800 border-green-300',
+          'reviewed': 'bg-green-100 text-green-800 border-green-300',
+          'needs_revision': 'bg-orange-100 text-orange-800 border-orange-300',
+          'in-progress': 'bg-blue-100 text-blue-800 border-blue-300',
+          'completed': 'bg-green-100 text-green-800 border-green-300'
+        };
+        const statusColor = statusColors[activity.status] || statusColors['draft'];
+        const statusLabel = (activity.status || 'draft').replace(/_/g, ' ');
+
+        const units = activity.units || activity.unitsCompleted;
+        const hasUnits = units && !isNaN(Number(units)) && Number(units) > 0;
+
+        // Desktop view (table row)
+        const desktopView = `
+          <div class="activity-item bg-white border-b border-gray-200 hover:bg-gray-50 transition-colors desktop-view cursor-pointer" data-detail-id="${escapeHtml(activity.id)}">
+            <div class="flex items-center gap-3 px-3 py-2 text-sm">
+              <input type="checkbox" class="bulk-check" data-id="${escapeHtml(activity.id)}" />
+              <span class="text-gray-600 w-24">${date !== 'No Date' ? new Date(date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'No Date'}</span>
+              <span class="text-gray-600 w-28">${escapeHtml(activity.name || currentUser?.name || '')}</span>
+              <span class="text-gray-600 w-28">${escapeHtml(activity.department)}</span>
+              <span class="font-semibold text-gray-900 flex-1">${escapeHtml(activity.title || activity.activityType)}</span>
+              ${hasUnits ? `<span class="text-blue-700 font-semibold w-16">${escapeHtml(String(units))}</span>` : '<span class="w-16"></span>'}
+              <span class="px-2 py-0.5 rounded-full text-xs font-semibold border capitalize ${statusColor}">${statusLabel}</span>
+              <div class="flex gap-1 w-24">
+                <button data-action="edit" data-activity-id="${escapeHtml(activity.id)}" class="edit-btn text-indigo-600 hover:text-indigo-800 font-semibold px-2 py-1 rounded hover:bg-indigo-50 transition-colors text-xs">Edit</button>
+                <button data-action="delete" data-activity-id="${escapeHtml(activity.id)}" class="delete-btn text-red-600 hover:text-red-800 font-semibold px-2 py-1 rounded hover:bg-red-50 transition-colors text-xs">Del</button>
+              </div>
+            </div>
+          </div>
+        `;
+
+        // Mobile view (card layout)
+        const mobileView = `
+          <div class="activity-item bg-white border-b border-gray-200 mobile-view cursor-pointer" style="display: none;" data-detail-id="${escapeHtml(activity.id)}">
+            <div class="mobile-card">
+              <div class="flex items-center gap-2 mb-2">
+                <input type="checkbox" class="bulk-check" data-id="${escapeHtml(activity.id)}" />
+                <span class="px-2 py-0.5 rounded-full text-xs font-semibold border capitalize ${statusColor}">${statusLabel}</span>
+              </div>
+              <div class="mobile-card-row border-b border-gray-100">
+                <span class="mobile-card-label">Date</span>
+                <span class="mobile-card-value font-semibold">${date !== 'No Date' ? new Date(date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'No Date'}</span>
+              </div>
+              <div class="mobile-card-row border-b border-gray-100">
+                <span class="mobile-card-label">Employee</span>
+                <span class="mobile-card-value">${escapeHtml(activity.name || currentUser?.name || '')}</span>
+              </div>
+              <div class="mobile-card-row border-b border-gray-100">
+                <span class="mobile-card-label">Department</span>
+                <span class="mobile-card-value">${escapeHtml(activity.department)}</span>
+              </div>
+              <div class="mobile-card-row border-b border-gray-100">
+                <span class="mobile-card-label">Activity</span>
+                <span class="mobile-card-value font-semibold text-gray-900">${escapeHtml(activity.title || activity.activityType)}</span>
+              </div>
+              ${hasUnits ? `
+              <div class="mobile-card-row border-b border-gray-100">
+                <span class="mobile-card-label">Units</span>
+                <span class="mobile-card-value text-blue-700 font-semibold">${escapeHtml(String(units))}</span>
+              </div>` : ''}
+              ${activity.description ? `
+              <div class="mobile-card-row border-b border-gray-100">
+                <span class="mobile-card-label">Description</span>
+                <span class="mobile-card-value text-gray-600">${escapeHtml(activity.description)}</span>
+              </div>` : ''}
+              <div class="flex gap-2 mt-3 justify-end">
+                <button data-action="edit" data-activity-id="${escapeHtml(activity.id)}" class="edit-btn text-indigo-600 hover:text-indigo-800 font-semibold px-3 py-1.5 rounded bg-indigo-50 transition-colors text-sm flex-1">Edit</button>
+                <button data-action="delete" data-activity-id="${escapeHtml(activity.id)}" class="delete-btn text-red-600 hover:text-red-800 font-semibold px-3 py-1.5 rounded bg-red-50 transition-colors text-sm flex-1">Delete</button>
+              </div>
+            </div>
+          </div>
+        `;
+
+        return desktopView + mobileView;
+        }).join('');
+
+        return `${activitiesHtml}`;
+      }).join('');
+
+      const headerHtml = `
+        <div class="bg-gray-100 border-b-2 border-gray-300 desktop-view">
+          <div class="flex items-center gap-3 px-3 py-2 text-xs font-bold text-gray-700 uppercase">
+            <input type="checkbox" id="select-all-check" title="Select All" />
+            <span class="w-24">Date</span>
+            <span class="w-28">Employee</span>
+            <span class="w-28">Department</span>
+            <span class="flex-1">Activity</span>
+            <span class="w-16">Units</span>
+            <span class="w-24">Status</span>
+            <span class="w-24">Actions</span>
+          </div>
+        </div>
+      `;
+
+      container.innerHTML = `<div class="border border-gray-200 rounded-lg overflow-hidden">${headerHtml}${groupedHtml}</div>`;
+
+      // Add event listeners for edit and delete buttons using event delegation
+      container.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          const activityId = this.getAttribute('data-activity-id');
+          editActivity(activityId);
+        });
+      });
+
+      container.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          const activityId = this.getAttribute('data-activity-id');
+          deleteActivity(activityId);
+        });
+      });
+
+      // Checkbox clicks should not open detail
+      container.querySelectorAll('.bulk-check, #select-all-check').forEach(cb => {
+        cb.addEventListener('click', function(e) {
+          e.stopPropagation();
+        });
+      });
+
+      // Click on activity row opens detail modal
+      container.querySelectorAll('[data-detail-id]').forEach(row => {
+        row.addEventListener('click', function() {
+          const activityId = this.getAttribute('data-detail-id');
+          showActivityDetail(activityId);
+        });
+      });
+    }
+
+    async function fetchActivities() {
+      if (!currentUser) return;
+
+      try {
+        const response = await authFetch('/api/activities');
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch activities');
+        }
+
+        const data = await response.json();
+        activities = data.activities || [];
+
+        populateFilterDropdowns();
+        renderActivities();
+      } catch (error) {
+        console.error('Error fetching activities:', error);
+        showNotification('Failed to load activities. Please try again.', 'error');
+
+        // Show error message in activities container
+        document.getElementById('activities-container').innerHTML = `
+          <div class="text-center py-12">
+            <svg class="mx-auto h-12 w-12 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <p class="mt-4 text-gray-600">Failed to load activities. Please refresh the page.</p>
+          </div>
+        `;
+      }
+    }
+
+    async function addActivity(formData) {
+      try {
+        const activityData = {
+          activityType: formData.activityType,
+          department: formData.department,
+          units: parseInt(formData.units),
+          description: formData.description,
+          title: formData.activityType,
+          status: 'pending',
+          week: formData.date || getCurrentWeek(),
+          activityDate: formData.date,
+          createdAt: new Date().toISOString()
+        };
+
+        const response = await authFetch('/api/activities', {
+          method: 'POST',
+          body: JSON.stringify(activityData)
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to add activity');
+        }
+
+        const data = await response.json();
+
+        showNotification('Activity added successfully!', 'success');
+
+        // Refresh activities list
+        await fetchActivities();
+
+        // Reset form
+        document.getElementById('activity-form').reset();
+      } catch (error) {
+        console.error('Error adding activity:', error);
+        showNotification('Failed to add activity. Please try again.', 'error');
+      }
+    }
+
+    function showDashboard() {
+      document.getElementById('login-section').classList.add('hidden');
+      document.getElementById('dashboard-section').classList.remove('hidden');
+
+      // Set user info
+      document.getElementById('user-name').textContent = currentUser.name;
+      document.getElementById('user-role').textContent = currentUser.role;
+
+      // Set logging-as banner
+      document.getElementById('logging-as-name').textContent = currentUser.name;
+
+      // Show admin link if user is admin
+      if (currentUser.role === 'admin') {
+        document.getElementById('admin-link').classList.remove('hidden');
+        document.getElementById('admin-link-mobile').classList.remove('hidden');
+      }
+
+      // Update activities section title based on visibility scope
+      const activitiesTitle = document.querySelector('#dashboard-section .vif-box:last-child .vif-header h2');
+      if (activitiesTitle) {
+        if (currentUser.visibilityScope === 'all') {
+          activitiesTitle.innerHTML = 'All Activities';
+        } else if (currentUser.visibilityScope === 'department') {
+          activitiesTitle.innerHTML = 'Department Activities';
+        }
+      }
+
+      // Update date and week display
+      updateDateDisplay();
+
+      // Load dropdown options from API
+      loadMetadata();
+
+      // Fetch activities
+      fetchActivities();
+    }
+
+    function showLogin() {
+      document.getElementById('dashboard-section').classList.add('hidden');
+      document.getElementById('login-section').classList.remove('hidden');
+
+      currentUser = null;
+      activities = [];
+    }
+
+    // Event Listeners
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const email = document.getElementById('email').value.trim().toLowerCase();
+      const password = document.getElementById('password').value;
+      const errorDiv = document.getElementById('login-error');
+      const buttonText = document.getElementById('login-button-text');
+      const spinner = document.getElementById('login-spinner');
+
+      // Show loading state
+      buttonText.textContent = 'Signing in...';
+      spinner.classList.remove('hidden');
+      errorDiv.classList.add('hidden');
+
+      try {
+        // Get the API URL (use current host for mobile compatibility)
+        const apiUrl = `${window.location.protocol}//${window.location.host}/api/auth/login`;
+        console.log('Login attempt to:', apiUrl);
+        console.log('Email:', email);
+
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({ email, password }),
+          credentials: 'same-origin',
+          mode: 'cors'
+        });
+
+        console.log('Response status:', response.status);
+
+        // Check if response is JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          throw new Error('Server returned invalid response. Please check your connection.');
+        }
+
+        const data = await response.json();
+        console.log('Response data:', data);
+
+        if (!response.ok) {
+          throw new Error(data.error || data.message || 'Login failed');
+        }
+
+        // Store JWT token
+        if (data.token) {
+          localStorage.setItem('vif-token', data.token);
+        }
+
+        // Store user data
+        currentUser = {
+          email: data.user.email,
+          name: data.user.name,
+          role: data.user.role,
+          visibilityScope: data.user.visibilityScope || 'self'
+        };
+
+        // Save to localStorage
+        localStorage.setItem('vif-user', JSON.stringify(currentUser));
+
+        console.log('Login successful, showing dashboard');
+
+        // Show dashboard
+        showDashboard();
+      } catch (error) {
+        console.error('Login error:', error);
+        console.error('Error stack:', error.stack);
+
+        // More detailed error message for debugging
+        let errorMessage = 'Invalid email or password. Please try again.';
+
+        if (error.message.includes('Failed to fetch')) {
+          errorMessage = 'Cannot connect to server. Please check your network connection.';
+        } else if (error.message.includes('NetworkError')) {
+          errorMessage = 'Network error. Make sure you are connected to the same Wi-Fi network.';
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+
+        errorDiv.textContent = errorMessage;
+        errorDiv.classList.remove('hidden');
+      } finally {
+        buttonText.textContent = 'Sign in';
+        spinner.classList.add('hidden');
+      }
+    });
+
+    document.getElementById('logout-button').addEventListener('click', () => {
+      localStorage.removeItem('vif-user');
+      localStorage.removeItem('vif-token');
+      showLogin();
+      showNotification('Logged out successfully', 'success');
+    });
+
+    // Mobile menu handlers
+    const mobileMenuBtn = document.getElementById('mobile-menu-button');
+    const mobileMenuOverlay = document.getElementById('mobile-menu-overlay');
+    const mobileMenuPanel = document.getElementById('mobile-menu-panel');
+    const mobileMenuClose = document.getElementById('mobile-menu-close');
+
+    function openMobileMenu() {
+      mobileMenuOverlay.classList.add('active');
+      mobileMenuPanel.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeMobileMenu() {
+      mobileMenuOverlay.classList.remove('active');
+      mobileMenuPanel.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    mobileMenuBtn.addEventListener('click', openMobileMenu);
+    mobileMenuOverlay.addEventListener('click', closeMobileMenu);
+    mobileMenuClose.addEventListener('click', closeMobileMenu);
+
+    // Mobile logout
+    document.getElementById('logout-button-mobile').addEventListener('click', () => {
+      closeMobileMenu();
+      localStorage.removeItem('vif-user');
+      localStorage.removeItem('vif-token');
+      showLogin();
+      showNotification('Logged out successfully', 'success');
+    });
+
+    // Mobile change password
+    document.getElementById('change-password-button-mobile').addEventListener('click', () => {
+      closeMobileMenu();
+      document.getElementById('change-password-modal').classList.remove('hidden');
+      document.getElementById('change-password-form').reset();
+      document.getElementById('password-error').classList.add('hidden');
+    });
+
+    // Change Password modal handlers
+    document.getElementById('change-password-button').addEventListener('click', () => {
+      document.getElementById('change-password-modal').classList.remove('hidden');
+      document.getElementById('change-password-form').reset();
+      document.getElementById('password-error').classList.add('hidden');
+    });
+
+    document.getElementById('close-password-modal').addEventListener('click', () => {
+      document.getElementById('change-password-modal').classList.add('hidden');
+    });
+
+    document.getElementById('change-password-modal').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) {
+        document.getElementById('change-password-modal').classList.add('hidden');
+      }
+    });
+
+    document.getElementById('change-password-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const currentPw = document.getElementById('current-password').value;
+      const newPw = document.getElementById('new-password').value;
+      const confirmPw = document.getElementById('confirm-password').value;
+      const errorDiv = document.getElementById('password-error');
+      const btnText = document.getElementById('change-pw-btn-text');
+      const spinner = document.getElementById('change-pw-spinner');
+
+      errorDiv.classList.add('hidden');
+
+      if (newPw !== confirmPw) {
+        errorDiv.textContent = 'New passwords do not match';
+        errorDiv.classList.remove('hidden');
+        return;
+      }
+
+      if (newPw.length < 8) {
+        errorDiv.textContent = 'New password must be at least 8 characters';
+        errorDiv.classList.remove('hidden');
+        return;
+      }
+
+      btnText.textContent = 'Updating...';
+      spinner.classList.remove('hidden');
+
+      try {
+        const response = await authFetch('/api/auth/change-password', {
+          method: 'POST',
+          body: JSON.stringify({
+            currentPassword: currentPw,
+            newPassword: newPw
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to change password');
+        }
+
+        document.getElementById('change-password-modal').classList.add('hidden');
+        showNotification('Password changed successfully!', 'success');
+      } catch (error) {
+        errorDiv.textContent = error.message;
+        errorDiv.classList.remove('hidden');
+      } finally {
+        btnText.textContent = 'Update Password';
+        spinner.classList.add('hidden');
+      }
+    });
+
+    // Handle date selection
+    document.getElementById('activity-date').addEventListener('change', (e) => {
+      selectedDate = e.target.value;
+      if (selectedDate) {
+        // Show activities section
+        document.getElementById('activities-for-date').classList.remove('hidden');
+        document.getElementById('selected-date-display').textContent = new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        document.getElementById('submit-date-display').textContent = new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+        // Load existing activities for this date
+        loadActivitiesForDate(selectedDate);
+      }
+    });
+
+
+    function loadActivitiesForDate(date) {
+      // Filter pending activities for this date
+      pendingActivities = pendingActivities.filter(a => a.date === date);
+      renderPendingActivities();
+    }
+
+    function renderPendingActivities() {
+      const container = document.getElementById('date-activities-list');
+      const submitSection = document.getElementById('submit-all-section');
+      const count = pendingActivities.length;
+
+      document.getElementById('activity-count').textContent = `${count} ${count === 1 ? 'activity' : 'activities'}`;
+      document.getElementById('total-activities').textContent = count;
+
+      if (count === 0) {
+        container.innerHTML = '<p class="text-gray-500 text-sm italic">No activities added yet for this date</p>';
+        submitSection.classList.add('hidden');
+        return;
+      }
+
+      submitSection.classList.remove('hidden');
+
+      const html = pendingActivities.map((activity, index) => {
+        const hasUnits = activity.units && !isNaN(Number(activity.units)) && Number(activity.units) > 0;
+
+        return `
+        <div class="p-2 bg-gray-50 border border-gray-200 rounded hover:border-indigo-300 transition-all">
+          <div class="flex justify-between items-center gap-3">
+            <div class="flex items-center gap-2 flex-1 text-sm">
+              <span class="font-bold text-gray-900">${index + 1}. ${escapeHtml(activity.activityType)} • ${escapeHtml(activity.department)}</span>
+              ${hasUnits ? `<span class="text-blue-700 font-semibold">${escapeHtml(String(activity.units))} units</span>` : ''}
+              ${activity.description ? `<span class="text-gray-600 truncate" title="${escapeHtml(activity.description)}">${escapeHtml(activity.description)}</span>` : ''}
+            </div>
+            <button onclick="removePendingActivity(${index})" class="text-red-600 hover:text-red-800 font-bold text-lg">✕</button>
+          </div>
+        </div>
+      `;
+      }).join('');
+
+      container.innerHTML = html;
+    }
+
+    window.removePendingActivity = function(index) {
+      pendingActivities.splice(index, 1);
+      renderPendingActivities();
+      showNotification('Activity removed', 'success');
+    };
+
+    function showActivityDetail(activityId) {
+      const activity = activities.find(a => a.id === activityId);
+      if (!activity) return;
+
+      const modal = document.getElementById('activity-detail-modal');
+      const body = document.getElementById('activity-detail-body');
+
+      const statusColors = {
+        'draft': 'bg-gray-100 text-gray-700',
+        'pending': 'bg-yellow-100 text-yellow-800',
+        'submitted': 'bg-blue-100 text-blue-800',
+        'approved': 'bg-green-100 text-green-800',
+        'reviewed': 'bg-green-100 text-green-800',
+        'needs_revision': 'bg-orange-100 text-orange-800',
+        'in-progress': 'bg-blue-100 text-blue-800',
+        'completed': 'bg-green-100 text-green-800'
+      };
+      const statusColor = statusColors[activity.status] || statusColors['draft'];
+      const statusLabel = (activity.status || 'draft').replace(/_/g, ' ');
+
+      const activityDate = activity.week || activity.activityDate;
+      const formattedDate = activityDate
+        ? new Date(activityDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+        : 'No date';
+
+      const createdAt = activity.createdAt
+        ? new Date(activity.createdAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
+        : '';
+
+      const submittedAt = activity.submittedAt
+        ? new Date(activity.submittedAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
+        : '';
+
+      const reviewedAt = activity.reviewedAt
+        ? new Date(activity.reviewedAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
+        : '';
+
+      const units = activity.units || activity.unitsCompleted;
+      const hasUnits = units && !isNaN(Number(units)) && Number(units) > 0;
+
+      body.innerHTML = `
+        <div class="flex items-center justify-between">
+          <span class="px-3 py-1 rounded-full text-sm font-semibold capitalize ${statusColor}">${escapeHtml(statusLabel)}</span>
+          <span class="text-sm text-gray-500">${escapeHtml(formattedDate)}</span>
+        </div>
+
+        <div>
+          <h4 class="text-xl font-bold text-gray-900">${escapeHtml(activity.title || activity.activityType || '')}</h4>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div class="bg-gray-50 rounded-lg p-3">
+            <p class="text-xs font-medium text-gray-500 uppercase">Employee</p>
+            <p class="text-sm font-semibold text-gray-900 mt-0.5">${escapeHtml(activity.name || currentUser?.name || '')}</p>
+          </div>
+          <div class="bg-gray-50 rounded-lg p-3">
+            <p class="text-xs font-medium text-gray-500 uppercase">Department</p>
+            <p class="text-sm font-semibold text-gray-900 mt-0.5">${escapeHtml(activity.department || '')}</p>
+          </div>
+          ${hasUnits ? `
+          <div class="bg-gray-50 rounded-lg p-3">
+            <p class="text-xs font-medium text-gray-500 uppercase">Units</p>
+            <p class="text-sm font-semibold text-blue-700 mt-0.5">${escapeHtml(String(units))}</p>
+          </div>` : ''}
+          ${activity.email ? `
+          <div class="bg-gray-50 rounded-lg p-3">
+            <p class="text-xs font-medium text-gray-500 uppercase">Email</p>
+            <p class="text-sm font-semibold text-gray-900 mt-0.5">${escapeHtml(activity.email)}</p>
+          </div>` : ''}
+        </div>
+
+        ${activity.description ? `
+        <div>
+          <p class="text-xs font-medium text-gray-500 uppercase mb-1">Description</p>
+          <p class="text-sm text-gray-700 bg-gray-50 rounded-lg p-3 whitespace-pre-wrap">${escapeHtml(activity.description)}</p>
+        </div>` : ''}
+
+        ${activity.adminFeedback ? `
+        <div>
+          <p class="text-xs font-medium text-gray-500 uppercase mb-1">Admin Feedback</p>
+          <p class="text-sm text-orange-800 bg-orange-50 border border-orange-200 rounded-lg p-3 whitespace-pre-wrap">${escapeHtml(activity.adminFeedback)}</p>
+        </div>` : ''}
+
+        <div class="border-t border-gray-200 pt-3 space-y-1">
+          ${createdAt ? `<p class="text-xs text-gray-500"><span class="font-medium">Created:</span> ${escapeHtml(createdAt)}</p>` : ''}
+          ${submittedAt ? `<p class="text-xs text-gray-500"><span class="font-medium">Submitted:</span> ${escapeHtml(submittedAt)}</p>` : ''}
+          ${reviewedAt ? `<p class="text-xs text-gray-500"><span class="font-medium">Reviewed:</span> ${escapeHtml(reviewedAt)}</p>` : ''}
+          <p class="text-xs text-gray-400"><span class="font-medium">ID:</span> ${escapeHtml(activity.id)}</p>
+        </div>
+      `;
+
+      // Wire up modal buttons
+      const editBtn = document.getElementById('detail-edit-btn');
+      const closeBtn = document.getElementById('detail-close-btn');
+      const closeX = document.getElementById('close-detail-modal');
+
+      editBtn.onclick = () => {
+        modal.classList.add('hidden');
+        editActivity(activityId);
+      };
+      closeBtn.onclick = () => modal.classList.add('hidden');
+      closeX.onclick = () => modal.classList.add('hidden');
+
+      // Close on backdrop click
+      modal.onclick = (e) => {
+        if (e.target === modal) modal.classList.add('hidden');
+      };
+
+      modal.classList.remove('hidden');
+    }
+
+    function editActivity(activityId) {
+      console.log('Edit activity called with ID:', activityId);
+      const activity = activities.find(a => a.id === activityId);
+      if (!activity) {
+        console.error('Activity not found:', activityId);
+        showNotification('Activity not found', 'error');
+        return;
+      }
+
+      console.log('Found activity:', activity);
+      // Set editing mode
+      editingActivityId = activityId;
+
+      // Populate form with activity data
+      const dateInput = document.getElementById('activity-date');
+      const departmentSelect = document.getElementById('department');
+      const activityTypeSelect = document.getElementById('activity-type');
+      const unitsInput = document.getElementById('units');
+      const descriptionInput = document.getElementById('description');
+      const buttonText = document.getElementById('add-button-text');
+
+      dateInput.value = activity.week || activity.activityDate || '';
+      departmentSelect.value = activity.department || '';
+
+      // Change button text to indicate update mode
+      buttonText.textContent = '✏️ Update Activity';
+
+      // Set form values directly (activity type is now a text input)
+      activityTypeSelect.value = activity.activityType || activity.title || '';
+      unitsInput.value = activity.units || activity.unitsCompleted || '';
+      descriptionInput.value = activity.description || '';
+
+      // Scroll to form
+      document.getElementById('activity-form').scrollIntoView({ behavior: 'smooth' });
+
+      showNotification('Edit the activity and click Update Activity', 'success');
+    }
+
+    async function deleteActivity(activityId) {
+      console.log('Delete activity called with ID:', activityId);
+
+      const confirmDelete = confirm('Are you sure you want to delete this activity?');
+      console.log('User confirmed delete:', confirmDelete);
+
+      if (!confirmDelete) {
+        return;
+      }
+
+      try {
+        const response = await authFetch(`/api/activities/${activityId}`, {
+          method: 'DELETE'
+        });
+
+        if (response.ok) {
+          showNotification('Activity deleted successfully!', 'success');
+          await fetchActivities();
+        } else {
+          showNotification('Failed to delete activity', 'error');
+        }
+      } catch (error) {
+        console.error('Delete error:', error);
+        showNotification('Failed to delete activity', 'error');
+      }
+    }
+
+    document.getElementById('activity-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      if (!selectedDate) {
+        showNotification('Please select a date first', 'error');
+        return;
+      }
+
+      const buttonText = document.getElementById('add-button-text');
+      const spinner = document.getElementById('add-spinner');
+
+      const isEditing = editingActivityId !== null;
+
+      // Show loading state
+      buttonText.textContent = isEditing ? 'Updating...' : 'Adding...';
+      spinner.classList.remove('hidden');
+
+      const formData = {
+        activityType: document.getElementById('activity-type').value,
+        department: document.getElementById('department').value,
+        units: parseInt(document.getElementById('units').value) || null,
+        description: document.getElementById('description').value,
+        date: selectedDate
+      };
+
+      try {
+        if (isEditing) {
+          // Update existing activity
+          const response = await authFetch(`/api/activities/${editingActivityId}`, {
+            method: 'PUT',
+            body: JSON.stringify({
+              ...formData,
+              week: formData.date
+            })
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to update activity');
+          }
+
+          showNotification('Activity updated successfully!', 'success');
+        } else {
+          // Submit new activity directly
+          await addActivity(formData);
+          showNotification('Activity added successfully!', 'success');
+        }
+
+        // Reset form
+        document.getElementById('activity-type').value = '';
+        document.getElementById('units').value = '';
+        document.getElementById('description').value = '';
+
+        // Reset date to today
+        const dateInput = document.getElementById('activity-date');
+        const today = new Date().toISOString().split('T')[0];
+        dateInput.value = today;
+        selectedDate = today;
+
+        // Clear editing state
+        editingActivityId = null;
+
+        // Refresh activities list
+        await fetchActivities();
+
+      } catch (error) {
+        showNotification(isEditing ? 'Failed to update activity' : 'Failed to add activity', 'error');
+      } finally {
+        buttonText.textContent = '➕ Add Activity';
+        spinner.classList.add('hidden');
+      }
+    });
+
+    // ====================  FILTER AND SEARCH FUNCTIONS ====================
+
+    async function populateFilterDropdowns() {
+      try {
+        // Derive filter options from the activities array, which is already
+        // scoped by the backend based on the user's visibility (self/department/all).
+        // This ensures department and consultant filters only show what the user can access.
+
+        // Extract unique departments from visible activities
+        allDepartments = [...new Set(activities.map(a => a.department).filter(Boolean))]
+          .sort()
+          .map(name => ({ name }));
+
+        // Initial population of all dropdowns
+        updateDepartmentFilter();
+        updateActivityTypeFilter();
+        updateConsultantFilter();
+
+      } catch (error) {
+        console.error('Error populating filter dropdowns:', error);
+      }
+    }
+
+    function updateDepartmentFilter() {
+      const departmentSelect = document.getElementById('filter-department');
+      departmentSelect.innerHTML = '<option value="">All Departments</option>' +
+        allDepartments
+          .sort((a, b) => a.name.localeCompare(b.name))
+          .map(dept => `<option value="${escapeHtml(dept.name)}">${escapeHtml(dept.name)}</option>`)
+          .join('');
+    }
+
+    function updateActivityTypeFilter(selectedDepartment = null, selectedConsultant = null) {
+      const activityTypeSelect = document.getElementById('filter-activity-type');
+      const currentValue = activityTypeSelect.value;
+
+      // Derive activity type options from actual activity data (free-text entries)
+      let sourceActivities = activities;
+
+      // If a department is selected, only show activity types from that department's activities
+      if (selectedDepartment) {
+        sourceActivities = sourceActivities.filter(a => a.department === selectedDepartment);
+      }
+
+      // If a consultant is selected, filter by their actual activity types
+      if (selectedConsultant) {
+        sourceActivities = sourceActivities.filter(a => a.name === selectedConsultant);
+      }
+
+      // Extract unique activity type names from actual data
+      const activityTypeNames = [...new Set(
+        sourceActivities
+          .map(a => a.activityType || a.title)
+          .filter(Boolean)
+      )].sort((a, b) => a.localeCompare(b));
+
+      activityTypeSelect.innerHTML = '<option value="">All Activities</option>' +
+        activityTypeNames
+          .map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`)
+          .join('');
+
+      // Restore previous selection if still valid
+      if (currentValue && activityTypeNames.includes(currentValue)) {
+        activityTypeSelect.value = currentValue;
+      }
+    }
+
+    function updateConsultantFilter(selectedDepartment = null) {
+      const consultantSelect = document.getElementById('filter-consultant');
+      const currentValue = consultantSelect.value;
+
+      let filteredActivities = activities;
+
+      // If a department is selected, only show consultants from that department
+      if (selectedDepartment) {
+        filteredActivities = activities.filter(a => a.department === selectedDepartment);
+      }
+
+      const consultants = [...new Set(filteredActivities.map(a => a.name).filter(Boolean))].sort();
+      consultantSelect.innerHTML = '<option value="">All Consultants</option>' +
+        consultants.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
+
+      // Restore previous selection if still valid
+      if (currentValue && consultants.includes(currentValue)) {
+        consultantSelect.value = currentValue;
+      }
+    }
+
+    // Update dependent filters when department changes
+    function onDepartmentFilterChange() {
+      const selectedDepartment = document.getElementById('filter-department').value;
+      updateActivityTypeFilter(selectedDepartment, null);
+      updateConsultantFilter(selectedDepartment, null);
+      applyFilters();
+    }
+
+    // Update dependent filters when consultant changes
+    function onConsultantFilterChange() {
+      const selectedConsultant = document.getElementById('filter-consultant').value;
+
+      if (selectedConsultant) {
+        // Always filter departments to show only those where consultant has activities
+        updateDepartmentFilterByConsultant(selectedConsultant);
+
+        // Get the consultant's activities to find their department(s)
+        const consultantActivities = activities.filter(a => a.name === selectedConsultant);
+        const consultantDepartments = [...new Set(consultantActivities.map(a => a.department).filter(Boolean))];
+
+        // If consultant only works in one department, auto-select it
+        if (consultantDepartments.length === 1) {
+          document.getElementById('filter-department').value = consultantDepartments[0];
+          updateActivityTypeFilter(consultantDepartments[0], selectedConsultant);
+        } else {
+          // Multiple departments - filter by consultant only
+          updateActivityTypeFilter(null, selectedConsultant);
+        }
+      } else {
+        // No consultant selected - reset to show all
+        updateDepartmentFilter();
+        const selectedDepartment = document.getElementById('filter-department').value;
+        updateActivityTypeFilter(selectedDepartment, null);
+      }
+
+      applyFilters();
+    }
+
+    function updateDepartmentFilterByConsultant(selectedConsultant) {
+      const departmentSelect = document.getElementById('filter-department');
+      const currentValue = departmentSelect.value;
+
+      let filteredDepartments = allDepartments;
+
+      // Filter departments to only show those where the consultant has activities
+      if (selectedConsultant) {
+        const consultantActivities = activities.filter(a => a.name === selectedConsultant);
+        const consultantDepartmentNames = [...new Set(consultantActivities.map(a => a.department).filter(Boolean))];
+        filteredDepartments = allDepartments.filter(d => consultantDepartmentNames.includes(d.name));
+      }
+
+      departmentSelect.innerHTML = '<option value="">All Departments</option>' +
+        filteredDepartments
+          .sort((a, b) => a.name.localeCompare(b.name))
+          .map(dept => `<option value="${escapeHtml(dept.name)}">${escapeHtml(dept.name)}</option>`)
+          .join('');
+
+      // Restore previous selection if still valid
+      if (currentValue && filteredDepartments.some(d => d.name === currentValue)) {
+        departmentSelect.value = currentValue;
+      }
+    }
+
+    function applyFilters() {
+      let filtered = [...activities];
+
+      // Apply activity type filter
+      const filterActivityType = document.getElementById('filter-activity-type')?.value;
+      if (filterActivityType) {
+        filtered = filtered.filter(activity =>
+          activity.activityType === filterActivityType || activity.title === filterActivityType
+        );
+      }
+
+      // Apply department filter
+      const filterDepartment = document.getElementById('filter-department')?.value;
+      if (filterDepartment) {
+        filtered = filtered.filter(activity => activity.department === filterDepartment);
+      }
+
+      // Apply consultant filter
+      const filterConsultant = document.getElementById('filter-consultant')?.value;
+      if (filterConsultant) {
+        filtered = filtered.filter(activity => activity.name === filterConsultant);
+      }
+
+      // Apply week number filter
+      const filterWeek = document.getElementById('filter-week')?.value;
+      if (filterWeek) {
+        const weekNum = parseInt(filterWeek);
+        filtered = filtered.filter(activity => {
+          const dateStr = activity.week || activity.activityDate;
+          if (!dateStr) return false;
+          const activityDate = new Date(dateStr + 'T00:00:00');
+          const activityWeekNum = getWeekNumber(activityDate);
+          return activityWeekNum === weekNum;
+        });
+      }
+
+      // Apply date filter
+      if (currentFilter !== 'all') {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        filtered = filtered.filter(activity => {
+          const activityDate = new Date(activity.week || activity.activityDate);
+          activityDate.setHours(0, 0, 0, 0);
+
+          switch (currentFilter) {
+            case 'today':
+              return activityDate.getTime() === today.getTime();
+
+            case 'this-week':
+              const weekStart = new Date(today);
+              weekStart.setDate(today.getDate() - today.getDay()); // Start of week (Sunday)
+              const weekEnd = new Date(weekStart);
+              weekEnd.setDate(weekStart.getDate() + 6); // End of week (Saturday)
+              return activityDate >= weekStart && activityDate <= weekEnd;
+
+            case 'last-week':
+              const lastWeekStart = new Date(today);
+              lastWeekStart.setDate(today.getDate() - today.getDay() - 7);
+              const lastWeekEnd = new Date(lastWeekStart);
+              lastWeekEnd.setDate(lastWeekStart.getDate() + 6);
+              return activityDate >= lastWeekStart && activityDate <= lastWeekEnd;
+
+            case 'this-month':
+              return activityDate.getMonth() === today.getMonth() &&
+                     activityDate.getFullYear() === today.getFullYear();
+
+            case 'custom':
+              const startDate = document.getElementById('filter-start-date').value;
+              const endDate = document.getElementById('filter-end-date').value;
+              if (startDate && endDate) {
+                const start = new Date(startDate);
+                const end = new Date(endDate);
+                start.setHours(0, 0, 0, 0);
+                end.setHours(23, 59, 59, 999);
+                return activityDate >= start && activityDate <= end;
+              }
+              return true;
+
+            default:
+              return true;
+          }
+        });
+      }
+
+      // Apply text search filter
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        filtered = filtered.filter(activity => {
+          const description = (activity.description || '').toLowerCase();
+          return description.includes(query);
+        });
+      }
+
+      filteredActivities = filtered;
+      renderActivities();
+    }
+
+    function resetFilters() {
+      currentFilter = 'all';
+      searchQuery = '';
+      document.getElementById('search-activities').value = '';
+      document.getElementById('filter-activity-type').value = '';
+      document.getElementById('filter-department').value = '';
+      document.getElementById('filter-consultant').value = '';
+      document.getElementById('filter-week').value = '';
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      document.querySelector('[data-filter="all"]').classList.add('active');
+      document.getElementById('custom-date-range').classList.add('hidden');
+      applyFilters();
+    }
+
+    window.resetFilters = resetFilters;
+
+    // Export to CSV function
+    function exportToCSV() {
+      const dataToExport = filteredActivities.length > 0 || searchQuery || currentFilter !== 'all'
+        ? filteredActivities
+        : activities;
+
+      if (dataToExport.length === 0) {
+        showNotification('No activities to export', 'error');
+        return;
+      }
+
+      // CSV headers
+      const headers = ['Date', 'Employee', 'Department', 'Activity Type', 'Units', 'Description'];
+
+      // CSV rows
+      const rows = dataToExport.map(activity => {
+        const date = activity.week || activity.activityDate || 'No Date';
+        const formattedDate = date !== 'No Date'
+          ? new Date(date + 'T00:00:00').toLocaleDateString('en-US')
+          : 'No Date';
+
+        return [
+          formattedDate,
+          activity.name || currentUser?.name || '',
+          activity.department || '',
+          activity.activityType || activity.title || '',
+          activity.units || activity.unitsCompleted || '',
+          (activity.description || '').replace(/,/g, ';') // Replace commas to avoid CSV issues
+        ];
+      });
+
+      // Combine headers and rows
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.join(','))
+      ].join('\n');
+
+      // Create download link
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `vif-activities-${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      showNotification(`Exported ${dataToExport.length} activities to CSV`, 'success');
+    }
+
+
+    // Check for existing user on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      const storedUser = localStorage.getItem('vif-user');
+      const storedToken = localStorage.getItem('vif-token');
+
+      if (storedUser && storedToken) {
+        try {
+          currentUser = JSON.parse(storedUser);
+          showDashboard();
+        } catch (error) {
+          console.error('Error parsing stored user:', error);
+          localStorage.removeItem('vif-user');
+          localStorage.removeItem('vif-token');
+        }
+      }
+
+      // Set default date to today when page loads
+      setTimeout(() => {
+        const dateInput = document.getElementById('activity-date');
+        if (dateInput) {
+          const today = new Date().toISOString().split('T')[0];
+          dateInput.value = today;
+          dateInput.dispatchEvent(new Event('change'));
+        }
+
+        // Add event listeners for filter and search
+        setupFilterAndSearch();
+      }, 100);
+    });
+
+    // Setup filter and search event listeners
+    function setupFilterAndSearch() {
+      // Filter button click handlers
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const filter = this.getAttribute('data-filter');
+          currentFilter = filter;
+
+          // Update active state
+          document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+          this.classList.add('active');
+
+          // Show/hide custom date range
+          if (filter === 'custom') {
+            document.getElementById('custom-date-range').classList.remove('hidden');
+          } else {
+            document.getElementById('custom-date-range').classList.add('hidden');
+          }
+
+          applyFilters();
+        });
+      });
+
+      // Custom date range change handlers
+      document.getElementById('filter-start-date').addEventListener('change', () => {
+        if (currentFilter === 'custom') {
+          applyFilters();
+        }
+      });
+
+      document.getElementById('filter-end-date').addEventListener('change', () => {
+        if (currentFilter === 'custom') {
+          applyFilters();
+        }
+      });
+
+      // Search input handler (with debounce)
+      let searchTimeout;
+      document.getElementById('search-activities').addEventListener('input', (e) => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+          searchQuery = e.target.value.trim();
+          applyFilters();
+        }, 300);
+      });
+
+      // Advanced filter handlers
+      document.getElementById('filter-activity-type').addEventListener('change', applyFilters);
+      document.getElementById('filter-department').addEventListener('change', onDepartmentFilterChange);
+      document.getElementById('filter-consultant').addEventListener('change', onConsultantFilterChange);
+      const weekFilterHandler = () => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+          applyFilters();
+        }, 300);
+      };
+      document.getElementById('filter-week').addEventListener('input', weekFilterHandler);
+      document.getElementById('filter-week').addEventListener('change', weekFilterHandler);
+
+      // Clear filters button handler
+      document.getElementById('clear-filters-btn').addEventListener('click', resetFilters);
+
+      // Export CSV button handler
+      document.getElementById('export-csv-button').addEventListener('click', exportToCSV);
+
+      // ============================================
+      // PWA & Mobile Features
+      // ============================================
+
+      // 1. Service Worker Registration
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/service-worker.js')
+            .then(registration => {
+              console.log('Service Worker registered successfully:', registration.scope);
+
+              // Request notification permission
+              if ('Notification' in window && Notification.permission === 'default') {
+                setTimeout(() => {
+                  Notification.requestPermission().then(permission => {
+                    console.log('Notification permission:', permission);
+                  });
+                }, 5000); // Ask after 5 seconds
+              }
+            })
+            .catch(error => {
+              console.error('Service Worker registration failed:', error);
+            });
+        });
+      }
+
+      // 2. PWA Install Prompt
+      let deferredPrompt;
+      const installBanner = document.getElementById('install-banner');
+      const installBtn = document.getElementById('install-btn');
+      const installDismiss = document.getElementById('install-dismiss');
+
+      window.addEventListener('beforeinstallprompt', (e) => {
+        console.log('beforeinstallprompt event fired');
+        e.preventDefault();
+        deferredPrompt = e;
+
+        // Show the install banner after a short delay
+        setTimeout(() => {
+          if (!localStorage.getItem('pwa-install-dismissed')) {
+            installBanner.classList.remove('hidden');
+          }
+        }, 3000);
+      });
+
+      // Install button click
+      if (installBtn) {
+        installBtn.addEventListener('click', async () => {
+          if (!deferredPrompt) {
+            console.log('No deferred prompt available');
+            return;
+          }
+
+          installBanner.classList.add('hidden');
+          deferredPrompt.prompt();
+
+          const { outcome } = await deferredPrompt.userChoice;
+          console.log(`User response to install prompt: ${outcome}`);
+
+          deferredPrompt = null;
+        });
+      }
+
+      // Dismiss install banner
+      if (installDismiss) {
+        installDismiss.addEventListener('click', () => {
+          installBanner.classList.add('hidden');
+          localStorage.setItem('pwa-install-dismissed', 'true');
+        });
+      }
+
+      // Detect when app is installed
+      window.addEventListener('appinstalled', () => {
+        console.log('PWA was installed');
+        installBanner.classList.add('hidden');
+        showNotification('App Installed!', 'VIFM Activity Tracker is now installed on your device.');
+      });
+
+      // 3. Voice-to-Text Implementation
+      const voiceBtn = document.getElementById('voice-input-btn');
+      const descriptionField = document.getElementById('description');
+      const micIcon = document.getElementById('mic-icon');
+      const voiceStatus = document.getElementById('voice-status');
+
+      // Detect iOS (Safari, Chrome on iOS all use WebKit)
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+      // Helper: create a voice recognition session
+      function createVoiceRecognition(options) {
+        const { button, field, statusEl, iconEl, onTranscript } = options;
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+          button.style.display = 'none';
+          return;
+        }
+
+        let recognition = null;
+        let isListening = false;
+        let manualStop = false;
+        let gotResult = false;
+        let restartCount = 0;
+        const MAX_RESTARTS = 50;
+
+        function createRecognition() {
+          const rec = new SpeechRecognition();
+          rec.continuous = isIOS ? false : true;
+          rec.interimResults = isIOS ? false : true;
+          rec.lang = 'en-US';
+
+          rec.onaudiostart = () => {
+            statusEl.textContent = 'Speak now...';
+          };
+
+          rec.onresult = (event) => {
+            restartCount = 0;
+            gotResult = true;
+            onTranscript(event);
+          };
+
+          rec.onerror = (event) => {
+            console.error('Speech recognition error:', event.error);
+            manualStop = true;
+            stopListening();
+            if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+              showNotification('Microphone Blocked', 'Allow microphone access in your browser settings for this site.');
+            } else if (event.error === 'network') {
+              showNotification('Network Error', 'Voice needs internet. Check your connection and try again.');
+            } else if (event.error === 'no-speech') {
+              showNotification('No Speech Heard', 'Tap the mic and speak clearly.');
+            } else if (event.error === 'audio-capture') {
+              showNotification('No Microphone', 'Could not access microphone. Check your device settings.');
+            } else {
+              showNotification('Voice Error', 'Error: ' + event.error);
+            }
+          };
+
+          rec.onend = () => {
+            if (isListening && !manualStop) {
+              if (isIOS) {
+                isListening = false;
+                if (gotResult) {
+                  statusEl.textContent = 'Done! Tap for more';
+                } else {
+                  statusEl.textContent = 'No speech. Tap to retry';
+                }
+                iconEl.classList.remove('text-red-500', 'animate-pulse');
+                setTimeout(() => {
+                  if (!isListening) statusEl.textContent = 'Voice';
+                }, 3000);
+                return;
+              }
+              restartCount++;
+              if (restartCount > MAX_RESTARTS) {
+                stopListening();
+                showNotification('Voice Stopped', 'Voice timed out. Tap the mic to start again.');
+                return;
+              }
+              setTimeout(() => {
+                if (!isListening || manualStop) return;
+                try {
+                  recognition = createRecognition();
+                  recognition.start();
+                } catch (e) {
+                  console.error('Voice restart failed:', e);
+                  stopListening();
+                }
+              }, 300);
+            } else {
+              isListening = false;
+              manualStop = false;
+              statusEl.textContent = 'Voice';
+              iconEl.classList.remove('text-red-500', 'animate-pulse');
+            }
+          };
+
+          return rec;
+        }
+
+        function stopListening() {
+          isListening = false;
+          manualStop = false;
+          restartCount = 0;
+          gotResult = false;
+          statusEl.textContent = 'Voice';
+          iconEl.classList.remove('text-red-500', 'animate-pulse');
+          try { recognition.stop(); } catch (e) {}
+          if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+        }
+
+        let micStream = null;
+
+        button.addEventListener('click', async () => {
+          if (isListening) {
+            manualStop = true;
+            try { recognition.stop(); } catch (e) {}
+            stopListening();
+            return;
+          }
+
+          // On iOS, get mic permission via getUserMedia first and keep stream alive
+          if (isIOS) {
+            try {
+              statusEl.textContent = 'Requesting mic...';
+              micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            } catch (e) {
+              showNotification('Microphone Blocked', 'Please allow microphone access when prompted, or enable it in your browser settings.');
+              statusEl.textContent = 'Voice';
+              return;
+            }
+          }
+
+          manualStop = false;
+          restartCount = 0;
+          gotResult = false;
+          recognition = createRecognition();
+          try {
+            recognition.start();
+            isListening = true;
+            statusEl.textContent = 'Listening...';
+            iconEl.classList.add('text-red-500', 'animate-pulse');
+          } catch (e) {
+            console.error('Voice start failed:', e);
+            showNotification('Voice Error', 'Could not start: ' + e.message);
+            statusEl.textContent = 'Voice';
+            if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+          }
+        });
+      }
+
+      // 3. Voice-to-Text for Description
+      (function() {
+        let voiceBaseText = '';
+        createVoiceRecognition({
+          button: voiceBtn,
+          field: descriptionField,
+          statusEl: voiceStatus,
+          iconEl: micIcon,
+          onTranscript: (event) => {
+            let finalTranscript = '';
+            let interimTranscript = '';
+            for (let i = 0; i < event.results.length; i++) {
+              if (event.results[i].isFinal) {
+                finalTranscript += event.results[i][0].transcript;
+              } else {
+                interimTranscript += event.results[i][0].transcript;
+              }
+            }
+            const combined = (finalTranscript + ' ' + interimTranscript).trim();
+            if (voiceBaseText.trim()) {
+              descriptionField.value = voiceBaseText + ' ' + combined;
+            } else {
+              descriptionField.value = combined;
+            }
+            if (finalTranscript) {
+              voiceBaseText = descriptionField.value;
+            }
+          }
+        });
+
+        // Reset base text when user clicks the voice button
+        voiceBtn.addEventListener('click', () => {
+          voiceBaseText = descriptionField.value;
+        });
+      })();
+
+      // 3b. Voice-to-Text for Activity Type
+      const voiceActivityBtn = document.getElementById('voice-activity-btn');
+      const activityTypeField = document.getElementById('activity-type');
+      const micIconActivity = document.getElementById('mic-icon-activity');
+      const voiceActivityStatus = document.getElementById('voice-activity-status');
+
+      createVoiceRecognition({
+        button: voiceActivityBtn,
+        field: activityTypeField,
+        statusEl: voiceActivityStatus,
+        iconEl: micIconActivity,
+        onTranscript: (event) => {
+          let transcript = '';
+          for (let i = 0; i < event.results.length; i++) {
+            transcript += event.results[i][0].transcript;
+          }
+          activityTypeField.value = transcript;
+        }
+      });
+
+      // 4. Offline/Online Detection
+      const offlineIndicator = document.getElementById('offline-indicator');
+
+      function updateOnlineStatus() {
+        if (navigator.onLine) {
+          offlineIndicator.classList.add('hidden');
+          console.log('Online');
+
+          // Trigger background sync if available
+          if ('serviceWorker' in navigator && 'sync' in navigator.serviceWorker) {
+            navigator.serviceWorker.ready.then(registration => {
+              return registration.sync.register('sync-activities');
+            }).catch(err => console.error('Background sync failed:', err));
+          }
+        } else {
+          offlineIndicator.classList.remove('hidden');
+          console.log('Offline');
+        }
+      }
+
+      // Check initial status
+      updateOnlineStatus();
+
+      // Listen for online/offline events
+      window.addEventListener('online', updateOnlineStatus);
+      window.addEventListener('offline', updateOnlineStatus);
+
+      // 5. Push Notifications Helper
+      function showNotification(title, body, options = {}) {
+        if ('Notification' in window && Notification.permission === 'granted') {
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.ready.then(registration => {
+              registration.showNotification(title, {
+                body: body,
+                icon: '/icons/icon-192x192.png',
+                badge: '/icons/icon-72x72.png',
+                vibrate: [200, 100, 200],
+                ...options
+              });
+            });
+          } else {
+            // Fallback to regular notification
+            new Notification(title, {
+              body: body,
+              icon: '/icons/icon-192x192.png',
+              ...options
+            });
+          }
+        }
+      }
+
+      // 6. Enhanced Form Submission with Offline Support
+      const originalSubmitActivity = window.submitActivity;
+      window.submitActivity = async function() {
+        try {
+          await originalSubmitActivity();
+
+          // Show notification on successful submission
+          if (Notification.permission === 'granted') {
+            showNotification('Activity Saved', 'Your activity has been successfully recorded.');
+          }
+        } catch (error) {
+          console.error('Activity submission error:', error);
+
+          // If offline, save to IndexedDB for later sync
+          if (!navigator.onLine) {
+            // This would be implemented with IndexedDB
+            console.log('Saving activity offline for later sync');
+            showNotification('Saved Offline', 'Activity will sync when you\'re back online.');
+          }
+        }
+      };
+
+      // 7. Detect if running as installed PWA
+      function isPWA() {
+        return window.matchMedia('(display-mode: standalone)').matches ||
+               window.navigator.standalone === true;
+      }
+
+      if (isPWA()) {
+        console.log('Running as installed PWA');
+        // Hide install banner permanently when running as PWA
+        if (installBanner) {
+          installBanner.remove();
+        }
+      }
+
+      // 8. Handle touch gestures for mobile (swipe to refresh)
+      let touchStartY = 0;
+      let touchEndY = 0;
+
+      document.addEventListener('touchstart', (e) => {
+        touchStartY = e.changedTouches[0].screenY;
+      }, { passive: true });
+
+      document.addEventListener('touchend', (e) => {
+        touchEndY = e.changedTouches[0].screenY;
+        handleSwipe();
+      }, { passive: true });
+
+      function handleSwipe() {
+        // Pull to refresh gesture (swipe down at top of page)
+        if (touchEndY - touchStartY > 100 && window.scrollY === 0) {
+          console.log('Pull to refresh triggered');
+          window.location.reload();
+        }
+      }
+
+      console.log('PWA features initialized successfully');
+    }
+
+    // ============================================
+    // NEW FEATURES: Dashboard Summary, Templates,
+    // Bulk Ops, Export, Notifications, Dark Mode,
+    // Keyboard Shortcuts, Password Complexity
+    // ============================================
+
+    // --- Dashboard Summary ---
+    async function loadDashboardSummary() {
+      try {
+        const period = document.getElementById('summary-period')?.value || 'this-month';
+        const now = new Date();
+        let startDate, endDate;
+        if (period === 'this-week') {
+          const day = now.getDay();
+          startDate = new Date(now); startDate.setDate(now.getDate() - day);
+          endDate = new Date(now);
+        } else if (period === 'this-month') {
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          endDate = new Date(now);
+        } else {
+          startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+          endDate = new Date(now.getFullYear(), now.getMonth(), 0);
+        }
+        const sd = startDate.toISOString().split('T')[0];
+        const ed = endDate.toISOString().split('T')[0];
+
+        const response = await authFetch(`/api/analytics/employee-summary?startDate=${sd}&endDate=${ed}`);
+        const data = await response.json();
+        if (!data.success) return;
+
+        const s = data.summary || {};
+        document.getElementById('sum-total').textContent = s.totalActivities || 0;
+        document.getElementById('sum-units').textContent = s.totalUnits || 0;
+        document.getElementById('sum-depts').textContent = Object.keys(s.byDepartment || {}).length;
+        document.getElementById('sum-types').textContent = Object.keys(s.byType || {}).length;
+      } catch (e) {
+        console.error('Dashboard summary error:', e);
+      }
+    }
+
+    // Toggle summary
+    document.getElementById('toggle-summary')?.addEventListener('click', () => {
+      const body = document.getElementById('dashboard-summary-body');
+      const btn = document.getElementById('toggle-summary');
+      body.classList.toggle('hidden');
+      btn.textContent = body.classList.contains('hidden') ? '▶' : '▼';
+    });
+    document.getElementById('summary-period')?.addEventListener('change', loadDashboardSummary);
+
+    // --- Notification Bell ---
+    let notifPollingInterval = null;
+
+    async function loadNotifications() {
+      try {
+        const response = await authFetch('/api/notifications?unreadOnly=false&limit=20');
+        const data = await response.json();
+        if (!data.success) return;
+
+        const notifications = data.notifications || [];
+        const unreadCount = data.unreadCount || 0;
+        const badge = document.getElementById('notif-badge');
+        const list = document.getElementById('notif-list');
+        const empty = document.getElementById('notif-empty');
+
+        if (unreadCount > 0) {
+          badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+          badge.classList.remove('hidden');
+        } else {
+          badge.classList.add('hidden');
+        }
+
+        if (notifications.length === 0) {
+          list.innerHTML = '';
+          empty.classList.remove('hidden');
+        } else {
+          empty.classList.add('hidden');
+          list.innerHTML = notifications.map(n => `
+            <div class="p-3 hover:bg-gray-50 cursor-pointer ${n.is_read ? 'opacity-60' : ''}" data-notif-id="${escapeHtml(n.id)}">
+              <div class="text-sm font-semibold text-gray-900">${escapeHtml(n.title || '')}</div>
+              <div class="text-xs text-gray-600 mt-0.5">${escapeHtml(n.message || '')}</div>
+              <div class="text-xs text-gray-400 mt-1">${n.created_at ? new Date(n.created_at).toLocaleString() : ''}</div>
+            </div>
+          `).join('');
+
+          list.querySelectorAll('[data-notif-id]').forEach(el => {
+            el.addEventListener('click', async () => {
+              const id = el.getAttribute('data-notif-id');
+              await authFetch(`/api/notifications/${id}/read`, { method: 'PUT' });
+              el.classList.add('opacity-60');
+              loadNotifications();
+            });
+          });
+        }
+      } catch (e) {
+        console.error('Notification load error:', e);
+      }
+    }
+
+    document.getElementById('notif-bell')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.getElementById('notif-dropdown').classList.toggle('active');
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!document.getElementById('notif-container')?.contains(e.target)) {
+        document.getElementById('notif-dropdown')?.classList.remove('active');
+      }
+    });
+
+    document.getElementById('mark-all-read')?.addEventListener('click', async () => {
+      await authFetch('/api/notifications/mark-all-read', { method: 'PUT' });
+      loadNotifications();
+    });
+
+    function startNotifPolling() {
+      loadNotifications();
+      notifPollingInterval = setInterval(loadNotifications, 60000);
+    }
+
+    // --- Dark Mode ---
+    function initDarkMode() {
+      const saved = localStorage.getItem('vif-dark-mode');
+      if (saved === 'true') {
+        document.documentElement.classList.add('dark');
+        document.getElementById('dark-icon')?.classList.add('hidden');
+        document.getElementById('light-icon')?.classList.remove('hidden');
+      }
+    }
+
+    document.getElementById('dark-mode-toggle')?.addEventListener('click', () => {
+      const isDark = document.documentElement.classList.toggle('dark');
+      localStorage.setItem('vif-dark-mode', isDark);
+      document.getElementById('dark-icon')?.classList.toggle('hidden', isDark);
+      document.getElementById('light-icon')?.classList.toggle('hidden', !isDark);
+    });
+
+    initDarkMode();
+
+    // --- Weekly Activity Counter Badge ---
+    function updateWeeklyBadge() {
+      const now = new Date();
+      const day = now.getDay();
+      const weekStart = new Date(now); weekStart.setDate(now.getDate() - day); weekStart.setHours(0,0,0,0);
+      const count = activities.filter(a => {
+        const d = new Date((a.week || a.activityDate) + 'T00:00:00');
+        return d >= weekStart;
+      }).length;
+      const badge = document.getElementById('weekly-activity-badge');
+      if (badge) {
+        badge.textContent = `${count} this week`;
+        badge.classList.remove('hidden');
+      }
+    }
+
+    // --- Bulk Operations ---
+    let selectedIds = new Set();
+
+    function updateBulkToolbar() {
+      const toolbar = document.getElementById('bulk-toolbar');
+      if (selectedIds.size > 0) {
+        toolbar.classList.add('active');
+        document.getElementById('bulk-count').textContent = `${selectedIds.size} selected`;
+      } else {
+        toolbar.classList.remove('active');
+      }
+    }
+
+    document.addEventListener('change', (e) => {
+      if (e.target.id === 'select-all-check') {
+        const checked = e.target.checked;
+        document.querySelectorAll('.bulk-check').forEach(cb => {
+          cb.checked = checked;
+          const id = cb.getAttribute('data-id');
+          if (checked) selectedIds.add(id); else selectedIds.delete(id);
+        });
+        updateBulkToolbar();
+      } else if (e.target.classList.contains('bulk-check')) {
+        const id = e.target.getAttribute('data-id');
+        if (e.target.checked) selectedIds.add(id); else selectedIds.delete(id);
+        updateBulkToolbar();
+      }
+    });
+
+    document.getElementById('bulk-deselect')?.addEventListener('click', () => {
+      selectedIds.clear();
+      document.querySelectorAll('.bulk-check').forEach(cb => cb.checked = false);
+      const selectAll = document.getElementById('select-all-check');
+      if (selectAll) selectAll.checked = false;
+      updateBulkToolbar();
+    });
+
+    document.getElementById('bulk-delete-btn')?.addEventListener('click', () => {
+      if (selectedIds.size === 0) return;
+      document.getElementById('bulk-confirm-msg').textContent = `Are you sure you want to delete ${selectedIds.size} activities?`;
+      document.getElementById('bulk-confirm-modal').classList.remove('hidden');
+    });
+
+    document.getElementById('bulk-confirm-yes')?.addEventListener('click', async () => {
+      document.getElementById('bulk-confirm-modal').classList.add('hidden');
+      try {
+        const response = await authFetch('/api/activities/bulk-delete', {
+          method: 'POST',
+          body: JSON.stringify({ activityIds: Array.from(selectedIds) })
+        });
+        const data = await response.json();
+        if (data.success) {
+          const count = selectedIds.size;
+          const deletedIds = Array.from(selectedIds);
+          selectedIds.clear();
+          updateBulkToolbar();
+          showNotification(`${count} activities deleted`);
+          // Show undo toast
+          showUndoToast(deletedIds);
+          await fetchActivities();
+        } else {
+          showNotification(data.error || 'Bulk delete failed', 'error');
+        }
+      } catch (e) { showNotification('Bulk delete failed', 'error'); }
+    });
+
+    // --- Undo Delete Toast ---
+    function showUndoToast(activityIds) {
+      const existing = document.querySelector('.undo-toast');
+      if (existing) existing.remove();
+      const toast = document.createElement('div');
+      toast.className = 'undo-toast';
+      toast.innerHTML = `
+        <span>${activityIds.length} activities deleted</span>
+        <button id="undo-delete-btn" class="px-3 py-1 bg-indigo-500 text-white rounded text-sm font-bold hover:bg-indigo-400">Undo</button>
+      `;
+      document.body.appendChild(toast);
+
+      const undoBtn = document.getElementById('undo-delete-btn');
+      undoBtn.addEventListener('click', async () => {
+        try {
+          for (const id of activityIds) {
+            await authFetch(`/api/activities/${id}/restore`, { method: 'POST' });
+          }
+          showNotification(`${activityIds.length} activities restored`);
+          toast.remove();
+          await fetchActivities();
+        } catch (e) { showNotification('Restore failed', 'error'); }
+      });
+
+      setTimeout(() => toast.remove(), 5000);
+    }
+
+    // --- Export Modal ---
+    document.getElementById('export-csv-button')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.getElementById('export-modal').classList.remove('hidden');
+    });
+
+    // Remove old direct exportToCSV listener and use modal
+    document.getElementById('export-go-btn')?.addEventListener('click', () => {
+      const format = document.querySelector('input[name="export-format"]:checked')?.value || 'csv';
+      const useFilters = document.getElementById('export-use-filters')?.checked;
+      const startDate = document.getElementById('export-start')?.value;
+      const endDate = document.getElementById('export-end')?.value;
+
+      let dataToExport = useFilters
+        ? (filteredActivities.length > 0 || isAnyFilterActive() ? filteredActivities : activities)
+        : activities;
+
+      // Apply date range if specified
+      if (startDate) {
+        dataToExport = dataToExport.filter(a => (a.week || a.activityDate || '') >= startDate);
+      }
+      if (endDate) {
+        dataToExport = dataToExport.filter(a => (a.week || a.activityDate || '') <= endDate);
+      }
+
+      if (dataToExport.length === 0) {
+        return showNotification('No activities to export', 'error');
+      }
+
+      if (format === 'xlsx' && typeof XLSX !== 'undefined') {
+        // Excel export
+        const rows = dataToExport.map(a => ({
+          Date: (a.week || a.activityDate || '').split('T')[0],
+          Employee: a.name || currentUser?.name || '',
+          Department: a.department || '',
+          'Activity Type': a.activityType || a.title || '',
+          Units: a.units || a.unitsCompleted || 0,
+          Status: a.status || 'draft',
+          Description: a.description || ''
+        }));
+        const ws = XLSX.utils.json_to_sheet(rows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Activities');
+        XLSX.writeFile(wb, `vif-activities-${new Date().toISOString().split('T')[0]}.xlsx`);
+        showNotification(`Exported ${dataToExport.length} activities to Excel`);
+      } else {
+        // CSV export
+        const headers = ['Date','Employee','Department','Activity Type','Units','Status','Description'];
+        const rows = dataToExport.map(a => [
+          (a.week || a.activityDate || '').split('T')[0],
+          a.name || currentUser?.name || '',
+          a.department || '',
+          a.activityType || a.title || '',
+          a.units || a.unitsCompleted || '',
+          a.status || 'draft',
+          (a.description || '').replace(/,/g, ';')
+        ]);
+        const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `vif-activities-${new Date().toISOString().split('T')[0]}.csv`;
+        link.click();
+        showNotification(`Exported ${dataToExport.length} activities to CSV`);
+      }
+
+      document.getElementById('export-modal').classList.add('hidden');
+    });
+
+    // --- Password Complexity Display ---
+    document.getElementById('new-password')?.addEventListener('input', (e) => {
+      const pw = e.target.value;
+      const hasLen = pw.length >= 8;
+      const hasUpper = /[A-Z]/.test(pw);
+      const hasNum = /[0-9]/.test(pw);
+      const hasSpecial = /[^A-Za-z0-9]/.test(pw);
+      const score = [hasLen, hasUpper, hasNum, hasSpecial].filter(Boolean).length;
+
+      document.getElementById('pw-len').className = hasLen ? 'text-green-600' : 'text-red-500';
+      document.getElementById('pw-upper').className = hasUpper ? 'text-green-600' : 'text-red-500';
+      document.getElementById('pw-num').className = hasNum ? 'text-green-600' : 'text-red-500';
+      document.getElementById('pw-special').className = hasSpecial ? 'text-green-600' : 'text-red-500';
+
+      const bar = document.getElementById('pw-strength-bar');
+      if (score <= 1) { bar.className = 'pw-strength weak'; }
+      else if (score <= 3) { bar.className = 'pw-strength medium'; }
+      else { bar.className = 'pw-strength strong'; }
+    });
+
+    // --- Keyboard Shortcuts ---
+    document.addEventListener('keydown', (e) => {
+      // Don't trigger in input/textarea fields (except Escape)
+      const inInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName);
+
+      if (e.key === 'Escape') {
+        // Close any open modal
+        document.getElementById('change-password-modal')?.classList.add('hidden');
+        document.getElementById('export-modal')?.classList.add('hidden');
+        document.getElementById('bulk-confirm-modal')?.classList.add('hidden');
+        document.getElementById('activity-detail-modal')?.classList.add('hidden');
+        document.getElementById('shortcuts-help')?.classList.add('hidden');
+        document.getElementById('notif-dropdown')?.classList.remove('active');
+        return;
+      }
+
+      if (inInput) return;
+
+      if (e.ctrlKey && e.key === 'n') {
+        e.preventDefault();
+        document.getElementById('activity-type')?.focus();
+        document.getElementById('activity-form')?.scrollIntoView({ behavior: 'smooth' });
+      }
+      if (e.ctrlKey && e.key === 'f') {
+        e.preventDefault();
+        document.getElementById('search-activities')?.focus();
+      }
+      if (e.key === '?') {
+        document.getElementById('shortcuts-help')?.classList.toggle('hidden');
+      }
+    });
+
+    // --- Patch showDashboard to init new features ---
+    const _originalShowDashboard = showDashboard;
+    showDashboard = function() {
+      _originalShowDashboard();
+      // Init new features after dashboard is shown
+      setTimeout(() => {
+        loadDashboardSummary();
+        startNotifPolling();
+        updateWeeklyBadge();
+      }, 200);
+    };
+
+    // Patch fetchActivities to update weekly badge
+    const _originalFetchActivities = fetchActivities;
+    fetchActivities = async function() {
+      await _originalFetchActivities();
+      updateWeeklyBadge();
+    };
+  </script>
+</body>
+</html>

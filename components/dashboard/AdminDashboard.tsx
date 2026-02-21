@@ -203,99 +203,101 @@ export default function AdminDashboard({ user }: { user: any }) {
     <div>
       <DashboardHeader user={user} />
 
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+      <main className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
         {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="card p-4">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
+          <div className="card p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Activities</p>
-                <p className="text-2xl font-bold">{stats.totalActivities}</p>
+                <p className="text-xs sm:text-sm text-gray-600">Total Activities</p>
+                <p className="text-xl sm:text-2xl font-bold">{stats.totalActivities}</p>
               </div>
-              <FiActivity className="h-8 w-8 text-blue-500" />
+              <FiActivity className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500 flex-shrink-0" />
             </div>
           </div>
 
-          <div className="card p-4">
+          <div className="card p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Pending Review</p>
-                <p className="text-2xl font-bold text-yellow-600">{stats.pendingReview}</p>
+                <p className="text-xs sm:text-sm text-gray-600">Pending Review</p>
+                <p className="text-xl sm:text-2xl font-bold text-yellow-600">{stats.pendingReview}</p>
               </div>
-              <FiAlertCircle className="h-8 w-8 text-yellow-500" />
+              <FiAlertCircle className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-500 flex-shrink-0" />
             </div>
           </div>
 
-          <div className="card p-4">
+          <div className="card p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Reviewed</p>
-                <p className="text-2xl font-bold text-green-600">{stats.reviewed}</p>
+                <p className="text-xs sm:text-sm text-gray-600">Reviewed</p>
+                <p className="text-xl sm:text-2xl font-bold text-green-600">{stats.reviewed}</p>
               </div>
-              <FiCheckCircle className="h-8 w-8 text-green-500" />
+              <FiCheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-500 flex-shrink-0" />
             </div>
           </div>
 
-          <div className="card p-4">
+          <div className="card p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Needs Clarification</p>
-                <p className="text-2xl font-bold text-orange-600">{stats.needsClarification}</p>
+                <p className="text-xs sm:text-sm text-gray-600 truncate">Needs Clarification</p>
+                <p className="text-xl sm:text-2xl font-bold text-orange-600">{stats.needsClarification}</p>
               </div>
-              <FiUsers className="h-8 w-8 text-orange-500" />
+              <FiUsers className="h-6 w-6 sm:h-8 sm:w-8 text-orange-500 flex-shrink-0" />
             </div>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="card p-4 mb-6">
-          <div className="flex flex-wrap gap-4 items-center">
+        <div className="card p-3 sm:p-4 mb-4 sm:mb-6">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:gap-4 sm:items-center">
             <div className="flex items-center gap-2">
               <FiFilter className="text-gray-500" />
-              <span className="font-medium">Filters:</span>
+              <span className="font-medium text-sm sm:text-base">Filters:</span>
             </div>
 
-            <select
-              value={selectedWeek}
-              onChange={(e) => setSelectedWeek(Number(e.target.value))}
-              className="select-field w-auto"
-            >
-              <option value={0}>Current Week</option>
-              <option value={1}>Last Week</option>
-              <option value={2}>2 Weeks Ago</option>
-              <option value={3}>3 Weeks Ago</option>
-              <option value={4}>4 Weeks Ago</option>
-            </select>
+            <div className="grid grid-cols-1 sm:flex sm:flex-wrap gap-3 sm:gap-4 flex-1">
+              <select
+                value={selectedWeek}
+                onChange={(e) => setSelectedWeek(Number(e.target.value))}
+                className="select-field sm:w-auto"
+              >
+                <option value={0}>Current Week</option>
+                <option value={1}>Last Week</option>
+                <option value={2}>2 Weeks Ago</option>
+                <option value={3}>3 Weeks Ago</option>
+                <option value={4}>4 Weeks Ago</option>
+              </select>
 
-            <select
-              value={selectedDepartment}
-              onChange={(e) => setSelectedDepartment(e.target.value)}
-              className="select-field w-auto"
-            >
-              <option value="all">All Departments</option>
-              {departments.map((dept) => (
-                <option key={dept.id} value={dept.id}>
-                  {dept.name}
-                </option>
-              ))}
-            </select>
+              <select
+                value={selectedDepartment}
+                onChange={(e) => setSelectedDepartment(e.target.value)}
+                className="select-field sm:w-auto"
+              >
+                <option value="all">All Departments</option>
+                {departments.map((dept) => (
+                  <option key={dept.id} value={dept.id}>
+                    {dept.name}
+                  </option>
+                ))}
+              </select>
 
-            <select
-              value={selectedEmployee}
-              onChange={(e) => setSelectedEmployee(e.target.value)}
-              className="select-field w-auto"
-            >
-              <option value="all">All Employees</option>
-              {employees.map((emp) => (
-                <option key={emp.id} value={emp.id}>
-                  {emp.full_name}
-                </option>
-              ))}
-            </select>
+              <select
+                value={selectedEmployee}
+                onChange={(e) => setSelectedEmployee(e.target.value)}
+                className="select-field sm:w-auto"
+              >
+                <option value="all">All Employees</option>
+                {employees.map((emp) => (
+                  <option key={emp.id} value={emp.id}>
+                    {emp.full_name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             <button
               onClick={handleExport}
-              className="btn-outline ml-auto flex items-center"
+              className="btn-outline sm:ml-auto flex items-center justify-center w-full sm:w-auto"
             >
               <FiDownload className="mr-2" />
               Export to Excel
@@ -305,11 +307,11 @@ export default function AdminDashboard({ user }: { user: any }) {
 
         {/* Tabs */}
         <div className="card">
-          <div className="border-b">
-            <nav className="flex space-x-8 px-6" aria-label="Tabs">
+          <div className="border-b overflow-x-auto -mx-px">
+            <nav className="flex space-x-4 sm:space-x-8 px-4 sm:px-6 min-w-max" aria-label="Tabs">
               <button
                 onClick={() => setActiveTab('review')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
                   activeTab === 'review'
                     ? 'border-primary text-primary'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -319,7 +321,7 @@ export default function AdminDashboard({ user }: { user: any }) {
               </button>
               <button
                 onClick={() => setActiveTab('analytics')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
                   activeTab === 'analytics'
                     ? 'border-primary text-primary'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -329,7 +331,7 @@ export default function AdminDashboard({ user }: { user: any }) {
               </button>
               <button
                 onClick={() => setActiveTab('employees')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
                   activeTab === 'employees'
                     ? 'border-primary text-primary'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -340,7 +342,7 @@ export default function AdminDashboard({ user }: { user: any }) {
             </nav>
           </div>
 
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             {activeTab === 'review' && (
               <ActivityReviewList
                 activities={activities}

@@ -212,23 +212,23 @@ export default function EmployeeDashboard({ user }: { user: any }) {
     <div>
       <DashboardHeader user={user} />
       
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+      <main className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
         {/* Weekly Status Banner */}
-        <div className="mb-6">
-          <div className={`card p-4 ${weeklyStatus?.submitted ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'}`}>
-            <div className="flex items-center justify-between">
+        <div className="mb-4 sm:mb-6">
+          <div className={`card p-3 sm:p-4 ${weeklyStatus?.submitted ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'}`}>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div className="flex items-center">
                 {weeklyStatus?.submitted ? (
                   <>
-                    <FiCheckCircle className="h-5 w-5 text-green-600 mr-2" />
-                    <span className="text-green-800 font-medium">
+                    <FiCheckCircle className="h-5 w-5 text-green-600 mr-2 flex-shrink-0" />
+                    <span className="text-green-800 font-medium text-sm sm:text-base">
                       Weekly activities submitted for Week {weeklyStatus.week}
                     </span>
                   </>
                 ) : (
                   <>
-                    <FiClock className="h-5 w-5 text-yellow-600 mr-2" />
-                    <span className="text-yellow-800 font-medium">
+                    <FiClock className="h-5 w-5 text-yellow-600 mr-2 flex-shrink-0" />
+                    <span className="text-yellow-800 font-medium text-sm sm:text-base">
                       Please submit your activities by Thursday EOD
                     </span>
                   </>
@@ -236,7 +236,7 @@ export default function EmployeeDashboard({ user }: { user: any }) {
               </div>
               <button
                 onClick={() => setShowForm(!showForm)}
-                className="btn-primary flex items-center"
+                className="btn-primary flex items-center w-full sm:w-auto justify-center"
               >
                 <FiPlus className="mr-2" />
                 Add Activity
@@ -250,7 +250,7 @@ export default function EmployeeDashboard({ user }: { user: any }) {
           <div className="lg:col-span-2 space-y-6">
             {/* Activity Form */}
             {showForm && (
-              <div className="card p-6">
+              <div className="card p-4 sm:p-6">
                 <h2 className="text-lg font-semibold mb-4">Add New Activity</h2>
                 
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -421,7 +421,7 @@ export default function EmployeeDashboard({ user }: { user: any }) {
             <NotificationPanel userId={user.id} />
             
             {/* Quick Stats */}
-            <div className="card p-6">
+            <div className="card p-4 sm:p-6">
               <h3 className="text-lg font-semibold mb-4">This Week's Summary</h3>
               <div className="space-y-3">
                 <div className="flex justify-between">

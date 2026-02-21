@@ -20,17 +20,26 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes, viewport-fit=cover" />
+        <meta name="theme-color" content="#121140" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="VIFM Tracker" />
+      </head>
       <body className={inter.className}>
         <AuthProvider>
           <NotificationProvider>
             {children}
-            <Toaster 
-              position="top-right"
+            <Toaster
+              position="top-center"
               toastOptions={{
                 duration: 4000,
                 style: {
                   background: '#363636',
                   color: '#fff',
+                  maxWidth: '90vw',
+                  fontSize: '14px',
                 },
                 success: {
                   style: {
