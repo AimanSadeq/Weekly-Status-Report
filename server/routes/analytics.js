@@ -10,13 +10,20 @@ if (HAS_SUPABASE) {
   supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 }
 
-// GET /api/analytics/employee-summary — aggregates user's activities
+// GET /api/analytics/employee-summary — aggregates activities based on user visibility
 router.get('/employee-summary', requireAuth, async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
-    const email = req.user.email;
+    const { email, role, visibilityScope } = req.user;
 
-    const userActivities = await db.getActivitiesByUser(email);
+    let userActivities;
+    if (visibilityScope === 'all' || (role === 'admin' && !visibilityScope)) {
+      userActivities = await db.getAllActivities();
+    } else if (visibilityScope === 'department') {
+      userActivities = await db.getActivitiesByUserDepartments(email);
+    } else {
+      userActivities = await db.getActivitiesByUser(email);
+    }
 
     // Filter by date range
     let filtered = userActivities;

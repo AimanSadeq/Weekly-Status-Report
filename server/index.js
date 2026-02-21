@@ -40,7 +40,8 @@ app.use(helmet({
         "'unsafe-eval'",
         "https://cdn.tailwindcss.com",
         "https://unpkg.com",
-        "https://cdn.jsdelivr.net"
+        "https://cdn.jsdelivr.net",
+        "http://localhost:35729"
       ],
       styleSrc: [
         "'self'",
@@ -50,7 +51,7 @@ app.use(helmet({
         "https://fonts.googleapis.com"
       ],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'"],
+      connectSrc: ["'self'", "ws://localhost:35729", "http://localhost:35729"],
       fontSrc: ["'self'", "https://cdn.jsdelivr.net", "https://fonts.gstatic.com"],
       objectSrc: ["'none'"],
       mediaSrc: ["'self'"],
@@ -80,6 +81,33 @@ const loginLimiter = rateLimit({
   message: { error: 'Too many login attempts. Please try again in a minute.' }
 });
 app.use('/api/auth/login', loginLimiter);
+
+// Hot reload in development
+if (process.env.NODE_ENV !== 'production') {
+  const livereload = require('livereload');
+  const fs = require('fs');
+
+  const liveReloadServer = livereload.createServer({
+    exts: ['html', 'css', 'js', 'png', 'jpg', 'gif', 'svg'],
+    delay: 100
+  });
+  liveReloadServer.watch(path.join(__dirname, '..', 'public'));
+
+  // Serve HTML files with livereload script injected
+  app.use((req, res, next) => {
+    const reqPath = req.path === '/' ? '/index.html' : req.path;
+    if (!reqPath.endsWith('.html')) return next();
+
+    const filePath = path.join(__dirname, '..', 'public', reqPath);
+    fs.readFile(filePath, 'utf8', (err, html) => {
+      if (err) return next();
+      const script = '<script src="http://localhost:35729/livereload.js?snipver=1"></script>';
+      html = html.replace('</body>', script + '</body>');
+      res.set('Content-Type', 'text/html');
+      res.send(html);
+    });
+  });
+}
 
 // Serve static files
 app.use(express.static('public'));

@@ -57,15 +57,15 @@
     <div class="bg-white rounded-lg shadow-md p-6 mb-6">
       <h2 class="text-xl font-bold text-gray-900 mb-4">Quick Reports</h2>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <button onclick="runReport('weekly')" class="p-4 border-2 border-indigo-200 rounded-lg hover:bg-indigo-50 text-left transition">
+        <button id="btn-weekly" class="p-4 border-2 border-indigo-200 rounded-lg hover:bg-indigo-50 text-left transition">
           <div class="text-lg font-bold text-indigo-700">Weekly Summary</div>
           <div class="text-sm text-gray-600">Current week's activity overview</div>
         </button>
-        <button onclick="runReport('monthly')" class="p-4 border-2 border-indigo-200 rounded-lg hover:bg-indigo-50 text-left transition">
+        <button id="btn-monthly" class="p-4 border-2 border-indigo-200 rounded-lg hover:bg-indigo-50 text-left transition">
           <div class="text-lg font-bold text-indigo-700">Monthly Department</div>
           <div class="text-sm text-gray-600">Department breakdown this month</div>
         </button>
-        <button onclick="runReport('custom')" class="p-4 border-2 border-indigo-200 rounded-lg hover:bg-indigo-50 text-left transition">
+        <button id="btn-custom" class="p-4 border-2 border-indigo-200 rounded-lg hover:bg-indigo-50 text-left transition">
           <div class="text-lg font-bold text-indigo-700">Custom Report</div>
           <div class="text-sm text-gray-600">Build with filters below</div>
         </button>
@@ -94,7 +94,7 @@
           </select>
         </div>
       </div>
-      <button onclick="generateCustomReport()" class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium">Generate Report</button>
+      <button id="btn-generate" class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium">Generate Report</button>
     </div>
 
     <!-- Report Output -->
@@ -103,8 +103,8 @@
         <div class="flex justify-between items-center mb-4">
           <h2 id="report-title" class="text-xl font-bold text-gray-900"></h2>
           <div class="flex gap-2">
-            <button onclick="exportReportCSV()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium">Export CSV</button>
-            <button onclick="exportReportXLSX()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">Export Excel</button>
+            <button id="btn-export-csv" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium">Export CSV</button>
+            <button id="btn-export-xlsx" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">Export Excel</button>
           </div>
         </div>
 
@@ -300,6 +300,14 @@
     const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
     document.getElementById('report-start').value = firstOfMonth.toISOString().split('T')[0];
     document.getElementById('report-end').value = today.toISOString().split('T')[0];
+
+    // Wire up buttons (inline onclick blocked by CSP script-src-attr)
+    document.getElementById('btn-weekly').addEventListener('click', () => runReport('weekly'));
+    document.getElementById('btn-monthly').addEventListener('click', () => runReport('monthly'));
+    document.getElementById('btn-custom').addEventListener('click', () => runReport('custom'));
+    document.getElementById('btn-generate').addEventListener('click', generateCustomReport);
+    document.getElementById('btn-export-csv').addEventListener('click', exportReportCSV);
+    document.getElementById('btn-export-xlsx').addEventListener('click', exportReportXLSX);
   </script>
 </body>
 </html>

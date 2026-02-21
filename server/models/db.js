@@ -385,9 +385,8 @@ class DBModel {
 
   async updateActivity(id, updates) {
     if (HAS_SUPABASE) {
-      // Convert app updates to Supabase schema
-      const supabaseUpdates = await storage.adapter.toSupabaseActivity(updates);
-      supabaseUpdates.updated_at = new Date().toISOString();
+      // Convert app updates to Supabase schema (partial update mode)
+      const supabaseUpdates = await storage.adapter.toSupabaseActivity(updates, true);
 
       const { data, error } = await storage.supabase
         .from('activities')

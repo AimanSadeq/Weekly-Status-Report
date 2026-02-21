@@ -720,6 +720,10 @@
             <div>
               <label for="units" class="block text-sm font-medium text-gray-700 mb-1">
                 Units/Days <span class="text-gray-400 text-xs">(optional)</span>
+                <span class="relative inline-block ml-1 cursor-help group">
+                  <svg class="inline w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-width="2" d="M12 16v-4m0-4h.01"/></svg>
+                  <span class="invisible group-hover:visible absolute bottom-full left-1/2 -translate-x-1/2 mb-1 w-48 px-2 py-1 text-xs text-white bg-gray-800 rounded shadow-lg z-50 text-center">e.g. number of training days, sessions, or hours</span>
+                </span>
               </label>
               <input
                 id="units"
@@ -732,8 +736,8 @@
             </div>
           </div>
 
-          <!-- Row 2: Activity Type + Description (same line) -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:items-start">
+          <!-- Row 2: Activity Type (1/3) + Description (2/3) -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 md:items-start">
             <div>
               <div class="flex items-center justify-between mb-1" style="min-height: 28px;">
                 <label for="activity-type" class="text-sm font-medium text-gray-700">
@@ -751,15 +755,20 @@
                   <span id="voice-activity-status">Voice</span>
                 </button>
               </div>
-              <input
-                type="text"
-                id="activity-type"
-                required
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                placeholder="e.g., Client Meeting, Report Writing..."
-              />
+              <div class="relative" id="activity-type-wrapper">
+                <input
+                  type="text"
+                  id="activity-type"
+                  required
+                  autocomplete="off"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 pr-8"
+                  placeholder="Type or select activity type..."
+                />
+                <svg class="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                <div id="activity-type-dropdown" class="hidden absolute z-50 left-0 right-0 top-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto"></div>
+              </div>
             </div>
-            <div>
+            <div class="md:col-span-2">
               <div class="flex items-center justify-between mb-1" style="min-height: 28px;">
                 <label for="description" class="text-sm font-medium text-gray-700">
                   Description <span class="text-gray-400 text-xs">(optional)</span>
@@ -786,6 +795,13 @@
           </div>
 
           <div class="flex justify-end gap-2">
+            <button
+              id="cancel-edit-btn"
+              type="button"
+              class="hidden w-full md:w-auto px-4 py-2.5 bg-gray-400 text-white rounded-lg hover:bg-gray-500 transition-colors font-medium text-sm"
+            >
+              ✕ Cancel
+            </button>
             <button
               type="submit"
               class="w-full md:w-auto px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium flex items-center justify-center text-sm"
@@ -981,7 +997,7 @@
     <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
       <div class="flex justify-between items-center mb-4">
         <h3 class="text-lg font-bold text-gray-900">Export Activities</h3>
-        <button onclick="document.getElementById('export-modal').classList.add('hidden')" aria-label="Close export modal" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+        <button id="export-modal-close" aria-label="Close export modal" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
       </div>
       <div class="space-y-4">
         <div>
@@ -1265,6 +1281,91 @@
         showNotification('Failed to load activity types and departments', 'error');
       }
     }
+
+    // Searchable Activity Type Dropdown
+    // --- Searchable Activity Type Dropdown ---
+    let atDropdownHighlight = -1;
+    let atFocusTime = 0;
+    const atInput = document.getElementById('activity-type');
+    const atDropdown = document.getElementById('activity-type-dropdown');
+
+    function getActivityTypeNames() {
+      return allActivityTypes.map(t => t.name || t).filter(Boolean).sort((a, b) => a.localeCompare(b));
+    }
+
+    function renderActivityTypeDropdown(filter) {
+      const names = getActivityTypeNames();
+      const query = (filter || '').toLowerCase();
+      const matches = query
+        ? names.filter(n => n.toLowerCase().includes(query))
+        : names;
+
+      if (matches.length === 0) {
+        atDropdown.classList.add('hidden');
+        return;
+      }
+
+      atDropdownHighlight = -1;
+      atDropdown.innerHTML = matches.map((name, i) =>
+        `<div class="activity-type-option px-3 py-2 text-sm cursor-pointer hover:bg-indigo-50" data-index="${i}" data-value="${escapeHtml(name)}">${escapeHtml(name)}</div>`
+      ).join('');
+      atDropdown.classList.remove('hidden');
+    }
+
+    atInput.addEventListener('input', () => renderActivityTypeDropdown(atInput.value));
+
+    atInput.addEventListener('focus', () => {
+      renderActivityTypeDropdown(atInput.value);
+      atFocusTime = Date.now();
+    });
+
+    atInput.addEventListener('click', () => {
+      // If focus just fired (within 200ms), skip — focus already opened it
+      if (Date.now() - atFocusTime < 200) return;
+      // Toggle: if dropdown is visible, hide it; otherwise show it
+      if (!atDropdown.classList.contains('hidden')) {
+        atDropdown.classList.add('hidden');
+      } else {
+        renderActivityTypeDropdown(atInput.value);
+      }
+    });
+
+    atDropdown.addEventListener('click', (e) => {
+      const option = e.target.closest('.activity-type-option');
+      if (option) {
+        atInput.value = option.dataset.value;
+        atDropdown.classList.add('hidden');
+      }
+    });
+
+    atInput.addEventListener('keydown', (e) => {
+      const options = atDropdown.querySelectorAll('.activity-type-option');
+      if (atDropdown.classList.contains('hidden') || options.length === 0) return;
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        atDropdownHighlight = Math.min(atDropdownHighlight + 1, options.length - 1);
+        options.forEach((o, i) => o.classList.toggle('bg-indigo-100', i === atDropdownHighlight));
+        options[atDropdownHighlight]?.scrollIntoView({ block: 'nearest' });
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        atDropdownHighlight = Math.max(atDropdownHighlight - 1, 0);
+        options.forEach((o, i) => o.classList.toggle('bg-indigo-100', i === atDropdownHighlight));
+        options[atDropdownHighlight]?.scrollIntoView({ block: 'nearest' });
+      } else if (e.key === 'Enter' && atDropdownHighlight >= 0) {
+        e.preventDefault();
+        atInput.value = options[atDropdownHighlight].dataset.value;
+        atDropdown.classList.add('hidden');
+      } else if (e.key === 'Escape') {
+        atDropdown.classList.add('hidden');
+      }
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('#activity-type-wrapper')) {
+        atDropdown.classList.add('hidden');
+      }
+    });
 
     function isAnyFilterActive() {
       return searchQuery
@@ -1936,6 +2037,17 @@
           ${reviewedAt ? `<p class="text-xs text-gray-500"><span class="font-medium">Reviewed:</span> ${escapeHtml(reviewedAt)}</p>` : ''}
           <p class="text-xs text-gray-400"><span class="font-medium">ID:</span> ${escapeHtml(activity.id)}</p>
         </div>
+
+        ${currentUser?.role === 'admin' && ['draft', 'submitted', 'needs_revision'].includes(activity.status) ? `
+        <div id="admin-review-section" class="border-t-2 border-indigo-200 pt-4 mt-2">
+          <p class="text-sm font-bold text-gray-900 mb-2">Admin Review</p>
+          <textarea id="review-feedback" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" rows="2" placeholder="Feedback (optional)"></textarea>
+          <div class="flex gap-2 mt-2">
+            <button id="review-approve-btn" class="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium">Approve</button>
+            <button id="review-reject-btn" class="flex-1 px-3 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 text-sm font-medium">Needs Revision</button>
+          </div>
+        </div>
+        ` : ''}
       `;
 
       // Wire up modal buttons
@@ -1950,12 +2062,48 @@
       closeBtn.onclick = () => modal.classList.add('hidden');
       closeX.onclick = () => modal.classList.add('hidden');
 
+      // Wire up admin review buttons
+      const approveBtn = document.getElementById('review-approve-btn');
+      const rejectBtn = document.getElementById('review-reject-btn');
+      if (approveBtn) {
+        approveBtn.onclick = () => reviewActivity(activityId, 'approve');
+      }
+      if (rejectBtn) {
+        rejectBtn.onclick = () => reviewActivity(activityId, 'reject');
+      }
+
       // Close on backdrop click
       modal.onclick = (e) => {
         if (e.target === modal) modal.classList.add('hidden');
       };
 
       modal.classList.remove('hidden');
+    }
+
+    async function reviewActivity(activityId, action) {
+      const feedback = document.getElementById('review-feedback')?.value || '';
+      try {
+        const response = await authFetch(`/api/activities/${activityId}/review`, {
+          method: 'POST',
+          body: JSON.stringify({
+            action: action,
+            adminFeedback: feedback,
+            adminName: currentUser.name
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Review failed');
+        }
+
+        const statusText = action === 'approve' ? 'approved' : 'sent back for revision';
+        showNotification(`Activity ${statusText}`, 'success');
+        document.getElementById('activity-detail-modal').classList.add('hidden');
+        await fetchActivities();
+      } catch (error) {
+        console.error('Review error:', error);
+        showNotification('Failed to review activity', 'error');
+      }
     }
 
     function editActivity(activityId) {
@@ -1990,11 +2138,30 @@
       unitsInput.value = activity.units || activity.unitsCompleted || '';
       descriptionInput.value = activity.description || '';
 
+      // Show cancel button
+      document.getElementById('cancel-edit-btn').classList.remove('hidden');
+
       // Scroll to form
       document.getElementById('activity-form').scrollIntoView({ behavior: 'smooth' });
 
       showNotification('Edit the activity and click Update Activity', 'success');
     }
+
+    function cancelEdit() {
+      editingActivityId = null;
+      document.getElementById('activity-form').reset();
+      document.getElementById('add-button-text').textContent = '➕ Add Activity';
+      document.getElementById('cancel-edit-btn').classList.add('hidden');
+
+      // Reset date to today
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('activity-date').value = today;
+      selectedDate = today;
+
+      showNotification('Edit cancelled', 'success');
+    }
+
+    document.getElementById('cancel-edit-btn').addEventListener('click', cancelEdit);
 
     async function deleteActivity(activityId) {
       console.log('Delete activity called with ID:', activityId);
@@ -2083,6 +2250,7 @@
 
         // Clear editing state
         editingActivityId = null;
+        document.getElementById('cancel-edit-btn').classList.add('hidden');
 
         // Refresh activities list
         await fetchActivities();
@@ -2506,8 +2674,7 @@
       // Clear filters button handler
       document.getElementById('clear-filters-btn').addEventListener('click', resetFilters);
 
-      // Export CSV button handler
-      document.getElementById('export-csv-button').addEventListener('click', exportToCSV);
+      // Export button now opens modal (see Export Modal section below)
 
       // ============================================
       // PWA & Mobile Features
@@ -3087,6 +3254,10 @@
     document.getElementById('export-csv-button')?.addEventListener('click', (e) => {
       e.stopPropagation();
       document.getElementById('export-modal').classList.remove('hidden');
+    });
+
+    document.getElementById('export-modal-close')?.addEventListener('click', () => {
+      document.getElementById('export-modal').classList.add('hidden');
     });
 
     // Remove old direct exportToCSV listener and use modal

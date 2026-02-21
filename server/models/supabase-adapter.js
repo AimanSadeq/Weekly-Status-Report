@@ -142,7 +142,50 @@ class SupabaseAdapter {
    * @param {Object} appData - Activity data from the app
    * @returns {Object} Supabase-formatted data
    */
-  async toSupabaseActivity(appData) {
+  async toSupabaseActivity(appData, isPartialUpdate = false) {
+    // For partial updates (e.g. review, status change), only convert provided fields
+    if (isPartialUpdate) {
+      const supabaseData = {};
+      if (appData.status !== undefined) supabaseData.status = appData.status;
+      if (appData.adminFeedback !== undefined) supabaseData.feedback = appData.adminFeedback;
+      // Note: feedbackRead is not stored in Supabase (no feedback_read column)
+      if (appData.reviewedAt !== undefined) supabaseData.reviewed_at = appData.reviewedAt;
+      if (appData.reviewedBy !== undefined) supabaseData.reviewed_by = appData.reviewedBy;
+      if (appData.submittedAt !== undefined) supabaseData.submitted_at = appData.submittedAt;
+      if (appData.description !== undefined) supabaseData.description = appData.description;
+
+      if (appData.email !== undefined) {
+        const employee = await this.getEmployeeByEmail(appData.email);
+        if (employee) {
+          supabaseData.employee_id = employee.id;
+          supabaseData.employee_name = employee.full_name || employee.name;
+        }
+      }
+      if (appData.activityType !== undefined) {
+        const activityType = await this.getActivityTypeByName(appData.activityType);
+        supabaseData.activity_type_id = activityType?.id || null;
+        supabaseData.activity_type_text = appData.activityType;
+      }
+      if (appData.department !== undefined) {
+        const department = await this.getDepartmentByName(appData.department);
+        supabaseData.department_id = department?.id || null;
+      }
+      if (appData.week !== undefined) {
+        const weekEnding = new Date(appData.week);
+        supabaseData.report_date = appData.week;
+        supabaseData.week_ending = appData.week;
+        supabaseData.week_number = this.getWeekNumber(weekEnding);
+        supabaseData.year = weekEnding.getFullYear();
+      }
+      if (appData.hours !== undefined) {
+        supabaseData.units_completed = Math.round(parseFloat(appData.hours));
+      }
+
+      supabaseData.updated_at = new Date().toISOString();
+      return supabaseData;
+    }
+
+    // Full object conversion (for creates and full updates)
     const employee = await this.getEmployeeByEmail(appData.email);
     // Activity type lookup is optional — free-text entries may not match an existing type
     const activityType = appData.activityType ? await this.getActivityTypeByName(appData.activityType) : null;
@@ -165,7 +208,7 @@ class SupabaseAdapter {
       description: appData.description || '',
       units_completed: appData.hours ? Math.round(parseFloat(appData.hours)) : null,
       percentage_complete: appData.percentageComplete ? Math.round(parseFloat(appData.percentageComplete)) : null,
-      status: appData.status || 'submitted',
+      ...(appData.status !== undefined ? { status: appData.status } : {}),
       week_number: weekNumber,
       year: year,
       week_ending: appData.week || new Date().toISOString().split('T')[0],
@@ -212,8 +255,9 @@ class SupabaseAdapter {
       hours: supabaseData.units_completed || 0,
       percentageComplete: supabaseData.percentage_complete || null,
       week: supabaseData.week_ending || supabaseData.report_date,
-      status: supabaseData.status || 'submitted',
+      status: supabaseData.status || 'draft',
       feedback: supabaseData.feedback || '',
+      adminFeedback: supabaseData.feedback || '',
       reviewedBy: supabaseData.reviewed_by || null,
       reviewedAt: supabaseData.reviewed_at || null,
       createdAt: supabaseData.created_at,
