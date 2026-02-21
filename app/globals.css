@@ -56,6 +56,8 @@
   body {
     @apply bg-background text-foreground;
     -webkit-tap-highlight-color: transparent;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
   /* Prevent iOS zoom on input focus */
   @media screen and (max-width: 768px) {
@@ -67,49 +69,49 @@
 
 @layer components {
   .btn-primary {
-    @apply bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2.5 rounded-md font-medium transition-colors text-sm min-h-[44px] inline-flex items-center justify-center;
+    @apply bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2.5 rounded-lg font-medium transition-all text-sm min-h-[44px] inline-flex items-center justify-center active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
   }
 
   .btn-secondary {
-    @apply bg-secondary text-secondary-foreground hover:bg-secondary/80 px-4 py-2.5 rounded-md font-medium transition-colors text-sm min-h-[44px] inline-flex items-center justify-center;
+    @apply bg-secondary text-secondary-foreground hover:bg-secondary/80 px-4 py-2.5 rounded-lg font-medium transition-all text-sm min-h-[44px] inline-flex items-center justify-center active:scale-[0.98];
   }
 
   .btn-outline {
-    @apply border border-input bg-background hover:bg-accent hover:text-accent-foreground px-4 py-2.5 rounded-md font-medium transition-colors text-sm min-h-[44px] inline-flex items-center justify-center;
+    @apply border border-input bg-background hover:bg-accent hover:text-accent-foreground px-4 py-2.5 rounded-lg font-medium transition-all text-sm min-h-[44px] inline-flex items-center justify-center active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
   }
 
   .btn-destructive {
-    @apply bg-destructive text-destructive-foreground hover:bg-destructive/90 px-4 py-2.5 rounded-md font-medium transition-colors text-sm min-h-[44px] inline-flex items-center justify-center;
+    @apply bg-destructive text-destructive-foreground hover:bg-destructive/90 px-4 py-2.5 rounded-lg font-medium transition-all text-sm min-h-[44px] inline-flex items-center justify-center active:scale-[0.98];
   }
-  
+
   .input-field {
-    @apply flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-base md:text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply flex h-11 w-full rounded-lg border border-input bg-background px-3 py-2 text-base md:text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-shadow;
   }
 
   .select-field {
-    @apply flex h-11 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-base md:text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply flex h-11 w-full items-center justify-between rounded-lg border border-input bg-background px-3 py-2 text-base md:text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-shadow;
   }
-  
+
   .card {
-    @apply rounded-lg border bg-card text-card-foreground shadow-sm;
+    @apply rounded-xl border bg-card text-card-foreground shadow-sm;
   }
-  
+
   .badge {
     @apply inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2;
   }
-  
+
   .badge-default {
     @apply border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80;
   }
-  
+
   .badge-success {
     @apply border-transparent bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100;
   }
-  
+
   .badge-warning {
     @apply border-transparent bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100;
   }
-  
+
   .badge-danger {
     @apply border-transparent bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100;
   }
@@ -117,12 +119,12 @@
 
 /* Loading spinner */
 .spinner {
-  border: 3px solid rgba(0, 0, 0, 0.1);
+  border: 3px solid rgba(0, 0, 0, 0.08);
   border-radius: 50%;
   border-top: 3px solid #3b82f6;
   width: 40px;
   height: 40px;
-  animation: spin 1s linear infinite;
+  animation: spin 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
 @keyframes spin {
@@ -130,20 +132,76 @@
   100% { transform: rotate(360deg); }
 }
 
+/* Smooth enter animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-in {
+  animation-duration: 150ms;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  animation-fill-mode: forwards;
+}
+
+.fade-in {
+  animation-name: fadeIn;
+}
+
+.slide-in-from-top-2 {
+  animation-name: slideDown;
+}
+
+.slide-in-from-bottom-2 {
+  animation-name: slideUp;
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-muted;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-muted-foreground/30 rounded-md;
+  @apply bg-muted-foreground/20 rounded-full;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-muted-foreground/50;
+  @apply bg-muted-foreground/40;
+}
+
+/* Line clamp utility */
+.line-clamp-1 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+.line-clamp-2 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+/* Focus visible for accessibility */
+*:focus-visible {
+  outline: 2px solid hsl(221.2, 83.2%, 53.3%);
+  outline-offset: 2px;
+  border-radius: 4px;
 }

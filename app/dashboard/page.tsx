@@ -37,8 +37,9 @@ export default function DashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 gap-3">
         <LoadingSpinner />
+        <p className="text-sm text-gray-500">Loading your dashboard...</p>
       </div>
     )
   }
